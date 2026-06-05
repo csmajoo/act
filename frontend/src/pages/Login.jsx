@@ -1,40 +1,53 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { supabase } from '../utils/supabase'
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('')
-  const [users, setUsers] = useState([])
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Load users from Supabase
-  useEffect(() => {
-    loadUsers()
-  }, [])
-
-  const loadUsers = async () => {
-    try {
-      const { data, error } = await supabase.from('users').select('*')
-      if (error) throw error
-      setUsers(data || [])
-    } catch (err) {
-      console.error('Error loading users:', err)
-    }
-  }
-
   const handleLogin = async (e) => {
     e.preventDefault()
-    if (!email.trim()) { setError('Pilih email untuk login'); return }
+    if (!email.trim() || !password.trim()) {
+      setError('Email dan password harus diisi')
+      return
+    }
     
-    setLoading(true); setError('')
+    setLoading(true)
+    setError('')
+    
     try {
-      // Find user in database
-      const user = users.find(u => u.email === email)
-      if (!user) { setError('User tidak ditemukan'); setLoading(false); return }
+      // Authenticate with Supabase
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password.trim()
+      })
+      
+      if (authError) {
+        setError(authError.message === 'Invalid login credentials' ? 'Email atau password salah' : authError.message)
+        setLoading(false)
+        return
+      }
 
-      // Store in localStorage and login
-      localStorage.setItem('auth_user', JSON.stringify(user))
-      onLogin(user)
+      // Get user profile from users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email.trim())
+        .single()
+      
+      if (userError) {
+        setError('User profile tidak ditemukan')
+        setLoading(false)
+        return
+      }
+
+      // Store auth token and user info
+      localStorage.setItem('auth_token', data.session.access_token)
+      localStorage.setItem('auth_user', JSON.stringify(userData))
+      
+      onLogin(userData)
     } catch (err) {
       setError(err.message || 'Login gagal')
     } finally {
@@ -69,29 +82,43 @@ export default function Login({ onLogin }) {
         <div style={{ padding: '30px' }}>
           <h2 style={{ fontSize: '20px', marginBottom: '6px' }}>Login</h2>
           <p style={{ fontSize: '15px', color: 'var(--text-light)', marginBottom: '20px' }}>
-            Pilih user untuk mulai
+            Masukkan email dan password untuk login
           </p>
 
           <form onSubmit={handleLogin}>
-            <div className="form-group">
-              <label>Pilih User</label>
-              <select
+            <div className="form-group" style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, fontSize: '14px' }}>
+                Email
+              </label>
+              <input
+                type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                required autoFocus
+                placeholder="user@majoo.id"
+                autoFocus
                 style={{
-                  fontSize: '15px', padding: '10px 12px',
+                  fontSize: '15px', padding: '12px',
                   width: '100%', border: '1px solid var(--border)',
-                  borderRadius: '6px', fontFamily: 'inherit'
+                  borderRadius: '6px', fontFamily: 'inherit', boxSizing: 'border-box'
                 }}
-              >
-                <option value="">-- Pilih user --</option>
-                {users.map(u => (
-                  <option key={u.id} value={u.email}>
-                    {u.name} ({u.role})
-                  </option>
-                ))}
-              </select>
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500, fontSize: '14px' }}>
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="Masukkan password"
+                style={{
+                  fontSize: '15px', padding: '12px',
+                  width: '100%', border: '1px solid var(--border)',
+                  borderRadius: '6px', fontFamily: 'inherit', boxSizing: 'border-box'
+                }}
+              />
             </div>
 
             {error && (
@@ -102,8 +129,12 @@ export default function Login({ onLogin }) {
               }}>{error}</div>
             )}
 
-            <button type="submit" className="btn btn-primary" disabled={loading}
-              style={{ width: '100%', padding: '12px', fontSize: '17px', fontWeight: 600 }}>
+            <button type="submit" disabled={loading}
+              style={{
+                width: '100%', padding: '12px', fontSize: '17px', fontWeight: 600,
+                background: loading ? '#ccc' : 'linear-gradient(90deg, #4ECDC4 0%, #17A697 100%)',
+                color: 'white', border: 'none', borderRadius: '6px', cursor: loading ? 'not-allowed' : 'pointer'
+              }}>
               {loading ? '⏳ Login...' : '🔐 Login'}
             </button>
           </form>
