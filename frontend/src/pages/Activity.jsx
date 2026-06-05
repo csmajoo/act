@@ -40,7 +40,7 @@ const fmtDate = (d) => {
 
 const EMPTY_FORM = {
   on_duty_user_id: '', category_id: '', activity_name: '',
-  start_time: '', end_time: '', duration: '', source_id: '', notes: '', recurrence: 'none', is_done: 0
+  activity_date: '', start_time: '', end_time: '', duration: '', source_id: '', notes: '', recurrence: 'none', is_done: 0
 }
 
 export default function Activity({ teamLeaders, users = [], categories = [], sources = [], currentUser }) {
@@ -211,6 +211,7 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
   const openModalEmpty = () => {
     setFormData({
       ...EMPTY_FORM,
+      activity_date: today,
       on_duty_user_id: currentUser ? currentUser.id.toString() : ''
     })
     setProcessingTaskId(null)
@@ -228,6 +229,7 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
       : userId.toString()
     setFormData({
       ...EMPTY_FORM,
+      activity_date: selectedDate || today,
       on_duty_user_id: effectiveUserId,
       start_time: startTime
     })
@@ -249,6 +251,7 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
       on_duty_user_id: act.on_duty_user_id?.toString() || '',
       category_id: act.category_id ? act.category_id.toString() : '',
       activity_name: act.activity_name || '',
+      activity_date: act.activity_date || today,
       start_time: act.start_time || '',
       end_time: act.end_time || '',
       duration: act.duration ? act.duration.toString() : '',
@@ -267,6 +270,7 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
       on_duty_user_id: task.assigned_to_user_id.toString(),
       category_id: task.category_id ? task.category_id.toString() : '',
       activity_name: task.task_name,
+      activity_date: today,
       start_time: start,
       end_time: calcEndTime(start, task.duration),
       duration: task.duration.toString(),
@@ -327,7 +331,7 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
 
   const baseActivityPayload = () => ({
     team_leader_id: deriveTeamLeaderId(selectedUser),
-    activity_date: selectedDate,
+    activity_date: formData.activity_date || selectedDate,
     category_id: parseInt(formData.category_id),
     activity_name: formData.activity_name.trim(),
     duration: parseInt(formData.duration),
@@ -457,6 +461,7 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
       on_duty_user_id: task.assigned_to_user_id.toString(),
       category_id: task.category_id ? task.category_id.toString() : '',
       activity_name: task.task_name,
+      activity_date: today,
       start_time: start,
       end_time: calcEndTime(start, task.duration),
       duration: task.duration.toString(),
@@ -1038,6 +1043,17 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
                   <label>Nama Activity <span style={{ color: '#dc2626' }}>*</span></label>
                   <input type="text" value={formData.activity_name} onChange={e => setFormData({ ...formData, activity_name: e.target.value })}
                     placeholder="Contoh: Handle Complaint PT ABC..." required autoFocus />
+                </div>
+
+                <div className="form-group">
+                  <label>Tanggal Aktivitas <span style={{ color: '#dc2626' }}>*</span></label>
+                  <input
+                    type="date"
+                    value={formData.activity_date || today}
+                    onChange={e => setFormData({ ...formData, activity_date: e.target.value })}
+                    required
+                    style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '6px' }}
+                  />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px', marginBottom: '14px' }}>
