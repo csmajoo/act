@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import api from '../utils/api'
+import toast from '../utils/toast'
 
 const ROLE_LABEL = { supervisor: 'Supervisor', team_leader: 'Team Leader', caretaker: 'Caretaker' }
 const ROLE_COLOR = { supervisor: '#0D7A71', team_leader: '#17A697', caretaker: '#FFC107' }
@@ -479,7 +480,7 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
         console.log(`📝 [${new Date().toLocaleTimeString()}] Handover task:`, handoverPayload)
         const response = await api.post('/tasks/handover', handoverPayload)
         console.log(`✅ [${new Date().toLocaleTimeString()}] Handover response:`, response)
-        alert(`✓ Handover ke ${response.data.assigned_to}`)
+        toast.success(`Handover berhasil ke ${response.data.assigned_to}`)
       } else {
         // Normal: create or update activity for self
         if (editingActivityId) {
@@ -498,7 +499,7 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
           console.log(`📝 [${new Date().toLocaleTimeString()}] Updating activity ${editingActivityId}:`, payload)
           const response = await api.put(`/activities/${editingActivityId}`, payload)
           console.log(`✅ [${new Date().toLocaleTimeString()}] PUT response:`, response)
-          alert(`✓ Aktivitas diperbarui`)
+          toast.success('Aktivitas berhasil diperbarui')
         } else {
           // CREATE new activity
           // Determine team_leader_id based on current user's role
@@ -528,7 +529,7 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
           console.log(`📝 [${new Date().toLocaleTimeString()}] Creating new activity:`, payload)
           const response = await api.post('/activities', payload)
           console.log(`✅ [${new Date().toLocaleTimeString()}] POST response:`, response)
-          alert(`✓ Aktivitas dibuat`)
+          toast.success('Aktivitas berhasil dibuat')
         }
       }
       
@@ -559,16 +560,16 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
       console.log(`🔄 Reloading activities after creation...`)
       const updatedActivities = await loadActivities()
       console.log(`✅ Activities reloaded. Total: ${updatedActivities.length}`)
-      
-      // Verify new activity is there
-      const newActivity = updatedActivities.find(a => a.activity_name === payload.activity_name)
+
+      // Verify new activity is there (use createForm value since payload is scoped)
+      const newActivity = updatedActivities.find(a => a.activity_name === createForm.activity_name)
       if (newActivity) {
         console.log(`✅ SUCCESS: New activity created with ID ${newActivity.id}`)
       }
     } catch (err) {
       console.error(`❌ [${new Date().toLocaleTimeString()}] Exception in handleCreateActivity:`, err)
       console.error(`Error response:`, err.response?.data)
-      alert(`Gagal membuat aktivitas: ${err.response?.data?.error || err.message}`)
+      toast.error(`Gagal membuat aktivitas: ${err.response?.data?.error || err.message}`)
     } finally {
       setCreatingActivity(false)
     }
