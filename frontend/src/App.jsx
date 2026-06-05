@@ -8,6 +8,7 @@ import UserManagement from './pages/UserManagement'
 import Login from './pages/Login'
 import { supabase } from './utils/supabase'
 import api, { isDevelopment } from './utils/api'
+import toast from './utils/toast'
 
 const ROLE_LABEL = { supervisor: 'Supervisor', team_leader: 'Team Leader', caretaker: 'Caretaker' }
 const ROLE_COLOR = { supervisor: '#0D7A71', team_leader: '#17A697', caretaker: '#FFC107' }
@@ -106,8 +107,10 @@ export default function App() {
   const handleLogout = async () => {
     if (!confirm('Logout dari aplikasi?')) return
     localStorage.removeItem('auth_user')
+    localStorage.removeItem('auth_token')
     setCurrentUser(null)
     setCurrentPage('dashboard')
+    toast.info('Anda telah logout')
   }
 
   const handleAddCategory = async (name) => {
@@ -115,7 +118,11 @@ export default function App() {
       const { data, error } = await supabase.from('activity_categories').insert([{ name }]).select()
       if (error) throw error
       setCategories([...categories, data[0]])
-    } catch (error) { console.error(error) }
+      toast.success(`Kategori "${name}" berhasil ditambahkan`)
+    } catch (error) {
+      console.error(error)
+      toast.error('Gagal menambahkan kategori')
+    }
   }
 
   const handleDeleteCategory = async (id) => {
@@ -134,7 +141,11 @@ export default function App() {
       const { data, error } = await supabase.from('activity_sources').insert([{ name }]).select()
       if (error) throw error
       setSources([...sources, data[0]])
-    } catch (error) { console.error(error) }
+      toast.success(`Sumber "${name}" berhasil ditambahkan`)
+    } catch (error) {
+      console.error(error)
+      toast.error('Gagal menambahkan sumber')
+    }
   }
 
   const handleDeleteSource = async (id) => {
@@ -150,17 +161,27 @@ export default function App() {
 
   // ── Render gates ──
   if (!authChecked) {
-    return <LoadingScreen message="Memeriksa session..." />
+    return <>
+      <ToastContainer />
+      <LoadingScreen message="Memeriksa session..." />
+    </>
   }
   if (!currentUser) {
-    return <Login onLogin={handleLogin} />
+    return <>
+      <ToastContainer />
+      <Login onLogin={handleLogin} />
+    </>
   }
   if (loading) {
-    return <LoadingScreen message="Memuat data aplikasi..." />
+    return <>
+      <ToastContainer />
+      <LoadingScreen message="Memuat data aplikasi..." />
+    </>
   }
 
   return (
     <div className="layout">
+      <ToastContainer />
       <Sidebar
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
@@ -235,6 +256,37 @@ function LoadingScreen({ message = 'Memuat...' }) {
         <div className="loading-dot"></div>
       </div>
       <div className="loading-progress"></div>
+    </div>
+  )
+}
+
+function ToastContainer() {
+  const [toasts, setToasts] = useState([])
+
+  useEffect(() => {
+    const unsubscribe = toast.subscribe(setToasts)
+    return unsubscribe
+  }, [])
+
+  const ICONS = {
+    success: '✅',
+    error: '❌',
+    warning: '⚠️',
+    info: 'ℹ️'
+  }
+
+  return (
+    <div className="toast-container">
+      {toasts.map(t => (
+        <div key={t.id} className={`toast toast-${t.type}`} onClick={() => toast.remove(t.id)}>
+          <div className="toast-icon">{ICONS[t.type]}</div>
+          <div className="toast-body">
+            {t.title && <div className="toast-title">{t.title}</div>}
+            <div className="toast-message">{t.message}</div>
+          </div>
+          <button className="toast-close" onClick={(e) => { e.stopPropagation(); toast.remove(t.id) }}>×</button>
+        </div>
+      ))}
     </div>
   )
 }
@@ -424,9 +476,12 @@ function ChangePasswordModal({ onClose }) {
         new_password: newPassword
       })
       setSuccess(true)
-      setTimeout(() => onClose(), 2000)
+      toast.success('Password berhasil diubah!')
+      setTimeout(() => onClose(), 1500)
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Gagal mengubah password')
+      const msg = err.response?.data?.error || err.message || 'Gagal mengubah password'
+      setError(msg)
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
@@ -598,9 +653,10 @@ function GoogleCalendarButton() {
     setBusy(true)
     try {
       await api.post('/google/disconnect')
+      toast.success('Google Calendar berhasil diputuskan')
       loadStatus()
     } catch (e) {
-      alert(e.response?.data?.error || e.message || 'Gagal memutus koneksi')
+      toast.error(e.response?.data?.error || e.message || 'Gagal memutus koneksi')
     } finally { setBusy(false) }
   }
 

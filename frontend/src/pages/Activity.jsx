@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import api from '../utils/api'
+import toast from '../utils/toast'
 
 // ── Constants ──
 const ROLE_LABEL = { supervisor: 'Supervisor', team_leader: 'Team Leader', caretaker: 'Caretaker' }
@@ -344,29 +345,38 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
     try {
       const payload = { ...baseActivityPayload(), sync_google_calendar: syncGoogle }
       let response
+      let actionLabel = ''
       if (editingActivityId) {
-        // Update existing activity
         response = await api.put(`/activities/${editingActivityId}`, payload)
+        actionLabel = 'Aktivitas berhasil diupdate'
       } else if (processingTaskId) {
-        // Process pending task with form overrides — marks task as done + creates activity
         response = await api.post(`/tasks/${processingTaskId}/process`, {
           ...payload,
           on_duty_user_id: parseInt(formData.on_duty_user_id)
         })
+        actionLabel = 'Task berhasil diproses menjadi aktivitas'
       } else {
         response = await api.post('/activities', { ...payload, on_duty_user_id: parseInt(formData.on_duty_user_id) })
+        const count = response.data?.count || 1
+        actionLabel = count > 1
+          ? `${count} aktivitas berhasil dibuat`
+          : 'Aktivitas berhasil disimpan'
       }
 
-      // Show success message with count if recurring
-      if (response.data?.count && response.data.count > 1) {
-        alert(`✓ Berhasil! ${response.data.count} aktivitas berhasil dibuat.`)
+      // Show success toast with GCal sync info
+      if (syncGoogle) {
+        toast.success(`${actionLabel} & disinkronkan ke Google Calendar`)
+      } else {
+        toast.success(actionLabel)
       }
 
       setModalOpen(false)
       setProcessingTaskId(null)
       setEditingActivityId(null)
       loadAll()
-    } catch (err) { alert('Gagal menyimpan aktivitas') }
+    } catch (err) {
+      toast.error('Gagal menyimpan aktivitas: ' + (err.response?.data?.error || err.message))
+    }
   }
 
   const handleHandover = async () => {
@@ -390,18 +400,24 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
         notes: formData.notes || null,
         assigned_date: selectedDate
       })
-      alert(`✓ Handover ke ${res.data.assigned_to} (${ROLE_LABEL[res.data.assigned_to_role]})`)
+      toast.success(`Handover berhasil ke ${res.data.assigned_to} (${ROLE_LABEL[res.data.assigned_to_role]})`)
       setModalOpen(false)
       setSupervisorHandoverTeamLeaderId(null)
       loadAll()
     } catch (err) {
-      alert('Gagal handover: ' + (err.response?.data?.error || err.message))
+      toast.error('Gagal handover: ' + (err.response?.data?.error || err.message))
     }
   }
 
   const handleDeleteActivity = async (id) => {
     if (!confirm('Hapus aktivitas ini?')) return
-    try { await api.delete(`/activities/${id}`); loadAll() } catch (err) {}
+    try {
+      await api.delete(`/activities/${id}`)
+      toast.success('Aktivitas berhasil dihapus')
+      loadAll()
+    } catch (err) {
+      toast.error('Gagal menghapus aktivitas')
+    }
   }
 
   const openProcessModal = (task) => {
@@ -416,14 +432,23 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
         activity_date: processData.activity_date || selectedDate,
         start_time: processData.start_time || null
       })
+      toast.success('Task berhasil diproses')
       setProcessTask(null)
       loadAll()
-    } catch (err) { alert('Gagal memproses task') }
+    } catch (err) {
+      toast.error('Gagal memproses task')
+    }
   }
 
   const handleDeleteTask = async (id) => {
     if (!confirm('Hapus task pending ini?')) return
-    try { await api.delete(`/tasks/${id}`); loadAll() } catch (err) {}
+    try {
+      await api.delete(`/tasks/${id}`)
+      toast.success('Task pending berhasil dihapus')
+      loadAll()
+    } catch (err) {
+      toast.error('Gagal menghapus task')
+    }
   }
 
   const openModalEditPendingTask = (task) => {

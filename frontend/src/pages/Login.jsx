@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import api from '../utils/api'
+import toast from '../utils/toast'
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('')
@@ -36,6 +37,7 @@ export default function Login({ onLogin }) {
       localStorage.setItem('auth_token', token)
       localStorage.setItem('auth_user', JSON.stringify(user))
 
+      toast.success(`Selamat datang, ${user.name}!`)
       onLogin(user, token)
     } catch (err) {
       const errMsg = err.response?.data?.error || err.message || 'Login gagal'
