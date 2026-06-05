@@ -79,30 +79,16 @@ const handlers = {
 
     const normalizedEmail = email.toLowerCase().trim()
 
-    console.log('[Login] Looking up user with email:', normalizedEmail)
-
     const { data: user, error } = await supabase
       .from('users')
       .select('id, name, role, team_leader_id, area, email, password_hash')
       .eq('email', normalizedEmail)
       .single()
 
-    if (error || !user) {
-      console.error('[Login] User not found. Error:', error)
-      throw new Error('Email atau password salah - email tidak terdaftar')
-    }
+    if (error || !user) throw new Error('Email atau password salah')
 
-    console.log('[Login] Found user:', {
-      id: user.id,
-      email: user.email,
-      passwordInDB: user.password_hash,
-      passwordEntered: password,
-      match: user.password_hash === password
-    })
-
-    // Simple password check (plain text in DB for simplicity in production demo)
     if (user.password_hash !== password) {
-      throw new Error(`Password salah. DB has: "${user.password_hash}" (length: ${user.password_hash?.length}), you entered: "${password}" (length: ${password.length})`)
+      throw new Error('Email atau password salah')
     }
 
     const token = generateToken()
@@ -173,7 +159,6 @@ const handlers = {
     if (!userEmail) throw new Error('User email tidak ditemukan. Silakan login ulang.')
 
     const normalizedEmail = userEmail.toLowerCase().trim()
-    console.log('[ChangePassword] Looking up user by email:', normalizedEmail)
 
     // Get current user data from DB by EMAIL (most reliable)
     const { data: user, error: userError } = await supabase
@@ -182,20 +167,11 @@ const handlers = {
       .eq('email', normalizedEmail)
       .single()
 
-    if (userError || !user) {
-      console.error('[ChangePassword] User lookup error:', userError)
-      throw new Error(`User dengan email ${normalizedEmail} tidak ditemukan di database`)
-    }
-
-    console.log('[ChangePassword] Found user:', {
-      id: user.id,
-      email: user.email,
-      currentPasswordInDB: user.password_hash
-    })
+    if (userError || !user) throw new Error('User tidak ditemukan')
 
     // Verify old password
     if (user.password_hash !== old_password) {
-      throw new Error(`Password lama salah. (DB has: "${user.password_hash}", you entered: "${old_password}")`)
+      throw new Error('Password lama salah')
     }
 
     // Update password by EMAIL (so we update the same user we just verified)
@@ -205,16 +181,11 @@ const handlers = {
       .eq('email', normalizedEmail)
       .select('id, email, password_hash')
 
-    if (updateError) {
-      console.error('[ChangePassword] Update error:', updateError)
-      throw new Error('Gagal update password: ' + updateError.message + '. Cek RLS policy di Supabase.')
-    }
+    if (updateError) throw new Error('Gagal menyimpan password baru')
 
     if (!updated || updated.length === 0) {
-      throw new Error('Update tidak berhasil - 0 rows affected. RLS policy memblokir UPDATE. Jalankan SUPABASE_FIX_RLS.sql di Supabase.')
+      throw new Error('Gagal menyimpan password baru')
     }
-
-    console.log('[ChangePassword] Updated:', updated[0])
 
     // Update localStorage with correct user ID (in case it was wrong)
     if (cachedUser && updated[0].id !== userId) {
@@ -222,7 +193,6 @@ const handlers = {
         const u = JSON.parse(cachedUser)
         u.id = updated[0].id
         localStorage.setItem('auth_user', JSON.stringify(u))
-        console.log('[ChangePassword] Fixed localStorage user.id to:', updated[0].id)
       } catch {}
     }
 
