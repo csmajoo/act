@@ -7,6 +7,7 @@ import Reports from './pages/Reports'
 import UserManagement from './pages/UserManagement'
 import Login from './pages/Login'
 import { supabase } from './utils/supabase'
+import { isDevelopment } from './utils/api'
 
 const ROLE_LABEL = { supervisor: 'Supervisor', team_leader: 'Team Leader', caretaker: 'Caretaker' }
 const ROLE_COLOR = { supervisor: '#0D7A71', team_leader: '#17A697', caretaker: '#FFC107' }
@@ -138,7 +139,8 @@ export default function App() {
 
   const handleDeleteSource = async (id) => {
     try {
-      await api.delete(`/users/sources/${id}`)
+      const { error } = await supabase.from('activity_sources').delete().eq('id', id)
+      if (error) throw error
       setSources(sources.filter(src => src.id !== id))
     } catch (error) {
       console.error('Failed to delete source:', error)
@@ -361,6 +363,12 @@ function GoogleCalendarButton() {
   const [busy, setBusy] = useState(false)
 
   const loadStatus = () => {
+    // Only load Google status in development mode
+    if (!isDevelopment()) {
+      setStatus({ configured: false, connected: false })
+      return
+    }
+    
     api.get('/google/status')
       .then(res => setStatus(res.data))
       .catch(() => setStatus({ configured: false, connected: false }))
@@ -381,6 +389,11 @@ function GoogleCalendarButton() {
   }, [])
 
   const handleConnect = async () => {
+    if (!isDevelopment()) {
+      alert('Google Calendar sync tidak tersedia di production mode (memerlukan backend server)')
+      return
+    }
+    
     setBusy(true)
     try {
       const res = await api.get('/google/auth-url')
@@ -392,6 +405,11 @@ function GoogleCalendarButton() {
   }
 
   const handleDisconnect = async () => {
+    if (!isDevelopment()) {
+      alert('Google Calendar sync tidak tersedia di production mode')
+      return
+    }
+    
     if (!confirm('Putuskan koneksi Google Calendar? Aktivitas baru tidak akan tersinkron lagi.')) return
     setBusy(true)
     try {
