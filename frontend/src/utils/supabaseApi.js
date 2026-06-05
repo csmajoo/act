@@ -502,6 +502,14 @@ const handlers = {
       notes: body.notes || null,
       updated_at: new Date().toISOString()
     }
+    // Include activity_date if provided (for moving activity to different date)
+    if (body.activity_date) {
+      payload.activity_date = body.activity_date
+    }
+    // Include team_leader_id if provided (for moving between teams)
+    if (body.team_leader_id) {
+      payload.team_leader_id = body.team_leader_id
+    }
     // Include is_done if provided (for mark done/undone)
     if (body.is_done !== undefined) {
       payload.is_done = body.is_done ? 1 : 0

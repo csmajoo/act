@@ -490,6 +490,7 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
         if (editingActivityId) {
           // UPDATE existing activity
           const payload = {
+            activity_date: createForm.activity_date,
             category_id: parseInt(createForm.category_id),
             activity_name: createForm.activity_name,
             duration: duration,
