@@ -1,16 +1,39 @@
 import axios from 'axios'
 import { getApiBaseUrl, isDevelopment, isSupabaseMode } from './env'
-import supabaseApi from './supabaseApi'
 
-const apiBaseUrl = getApiBaseUrl() || 'http://localhost:5000/api'
+const apiBaseUrl = getApiBaseUrl() === 'supabase' ? null : (getApiBaseUrl() || 'http://localhost:5000/api')
+
+// Safe default responses - returns empty arrays so .reduce/.map/.filter don't crash
+const safeEmptyResponse = (endpoint) => {
+  // Most endpoints return arrays
+  return { data: [] }
+}
+
+// Mock API that returns empty data for all requests
+// Used when backend is not available (production without backend)
+const mockApi = {
+  get: (endpoint) => {
+    console.warn(`[Mock API] GET ${endpoint} - returning empty data`)
+    return Promise.resolve(safeEmptyResponse(endpoint))
+  },
+  post: (endpoint, data) => {
+    console.warn(`[Mock API] POST ${endpoint} - not available in production`)
+    return Promise.resolve({ data: { success: false, message: 'Backend not available' } })
+  },
+  put: (endpoint, data) => {
+    console.warn(`[Mock API] PUT ${endpoint} - not available in production`)
+    return Promise.resolve({ data: { success: false, message: 'Backend not available' } })
+  },
+  delete: (endpoint) => {
+    console.warn(`[Mock API] DELETE ${endpoint} - not available in production`)
+    return Promise.resolve({ data: { success: false, message: 'Backend not available' } })
+  }
+}
 
 let api
 
-// Use Supabase API in production mode
-if (isSupabaseMode()) {
-  console.log('[API] Using Supabase API mode')
-  api = supabaseApi
-} else {
+if (apiBaseUrl) {
+  // Use real axios instance (development with backend)
   api = axios.create({
     baseURL: apiBaseUrl,
     headers: {
@@ -29,11 +52,11 @@ if (isSupabaseMode()) {
   api.interceptors.response.use(
     res => res,
     err => {
-      // In production, silently ignore connection errors to backend
+      // In production, silently ignore connection errors and return empty data
       if (!isDevelopment()) {
-        if (err.code === 'ERR_NETWORK' || err.code === 'ECONNREFUSED') {
-          console.warn('[API] Backend not available in production mode')
-          return { data: null, error: 'Backend unavailable' }
+        if (err.code === 'ERR_NETWORK' || err.code === 'ECONNREFUSED' || err.message === 'Network Error') {
+          console.warn('[API] Backend not available - returning empty data')
+          return Promise.resolve({ data: [] })
         }
       }
 
@@ -46,6 +69,10 @@ if (isSupabaseMode()) {
       return Promise.reject(err)
     }
   )
+} else {
+  // Production mode without backend - use mock API
+  console.log('[API] Backend not available - using mock API (empty data fallback)')
+  api = mockApi
 }
 
 export default api
