@@ -422,9 +422,9 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
     setShowCreateModal(true)
   }
 
-  const handleCreateActivity = async (e) => {
-    e.preventDefault()
-    
+  const handleCreateActivity = async (e, syncGoogle = false) => {
+    e?.preventDefault?.()
+
     if (!createForm.activity_name.trim()) {
       alert('Nama aktivitas tidak boleh kosong')
       return
@@ -493,13 +493,16 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
             end_time: createForm.end_time || null,
             source_id: createForm.source_id ? parseInt(createForm.source_id) : null,
             notes: createForm.notes,
-            is_done: 0
+            is_done: 0,
+            sync_google_calendar: syncGoogle
           }
-          
+
           console.log(`📝 [${new Date().toLocaleTimeString()}] Updating activity ${editingActivityId}:`, payload)
           const response = await api.put(`/activities/${editingActivityId}`, payload)
           console.log(`✅ [${new Date().toLocaleTimeString()}] PUT response:`, response)
-          toast.success('Aktivitas berhasil diperbarui')
+          toast.success(syncGoogle
+            ? 'Aktivitas berhasil diperbarui & disinkronkan ke Google Calendar'
+            : 'Aktivitas berhasil diperbarui')
         } else {
           // CREATE new activity
           // Determine team_leader_id based on current user's role
@@ -509,7 +512,7 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
           } else if (currentUser?.role === 'caretaker') {
             teamLeaderId = currentUser.team_leader_id
           }
-          
+
           const payload = {
             team_leader_id: teamLeaderId,
             on_duty_user_id: currentUser?.id,
@@ -523,13 +526,16 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
             notes: createForm.notes,
             repeat_type: createForm.repeat_type,
             repeat_end_date: createForm.repeat_type !== 'none' ? createForm.repeat_end_date : null,
-            is_done: 0
+            is_done: 0,
+            sync_google_calendar: syncGoogle
           }
-          
+
           console.log(`📝 [${new Date().toLocaleTimeString()}] Creating new activity:`, payload)
           const response = await api.post('/activities', payload)
           console.log(`✅ [${new Date().toLocaleTimeString()}] POST response:`, response)
-          toast.success('Aktivitas berhasil dibuat')
+          toast.success(syncGoogle
+            ? 'Aktivitas berhasil dibuat & disinkronkan ke Google Calendar'
+            : 'Aktivitas berhasil dibuat')
         }
       }
       
@@ -1320,7 +1326,7 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
               </div>
 
               {/* Buttons */}
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
@@ -1330,13 +1336,25 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
                   Batal
                 </button>
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={(e) => handleCreateActivity(e, false)}
                   className="btn btn-success btn-sm"
                   disabled={creatingActivity}
                   style={{ background: isHandoverMode ? '#3B82F6' : '#5DD65D', borderColor: isHandoverMode ? '#3B82F6' : '#5DD65D' }}
                 >
                   {creatingActivity ? '⏳ Menyimpan...' : (isHandoverMode ? '→ Serahkan Aktivitas' : '✓ Simpan Aktivitas')}
                 </button>
+                {!isHandoverMode && (
+                  <button
+                    type="button"
+                    onClick={(e) => handleCreateActivity(e, true)}
+                    className="btn btn-sm"
+                    disabled={creatingActivity}
+                    style={{ background: '#17A697', borderColor: '#17A697', color: 'white' }}
+                  >
+                    {creatingActivity ? '⏳ ...' : '✓ Simpan + Sync GCal'}
+                  </button>
+                )}
               </div>
             </form>
           </div>
