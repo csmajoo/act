@@ -562,12 +562,7 @@ function GoogleCalendarButton() {
   const [busy, setBusy] = useState(false)
 
   const loadStatus = () => {
-    // In production mode, show button but mark as configured (will show "coming soon" on click)
-    if (!isDevelopment()) {
-      setStatus({ configured: true, connected: false })
-      return
-    }
-
+    // Works in both dev (Node.js backend) and production (Supabase Edge Functions)
     api.get('/google/status')
       .then(res => setStatus(res.data))
       .catch(() => setStatus({ configured: false, connected: false }))
@@ -588,34 +583,24 @@ function GoogleCalendarButton() {
   }, [])
 
   const handleConnect = async () => {
-    if (!isDevelopment()) {
-      alert('Google Calendar sync tidak tersedia di production mode (memerlukan backend server)')
-      return
-    }
-    
     setBusy(true)
     try {
       const res = await api.get('/google/auth-url')
       window.location.href = res.data.url // full-page redirect to Google consent
     } catch (e) {
-      alert(e.response?.data?.error || 'Gagal memulai koneksi Google')
+      alert(e.response?.data?.error || e.message || 'Gagal memulai koneksi Google')
       setBusy(false)
     }
   }
 
   const handleDisconnect = async () => {
-    if (!isDevelopment()) {
-      alert('Google Calendar sync tidak tersedia di production mode')
-      return
-    }
-    
     if (!confirm('Putuskan koneksi Google Calendar? Aktivitas baru tidak akan tersinkron lagi.')) return
     setBusy(true)
     try {
       await api.post('/google/disconnect')
       loadStatus()
     } catch (e) {
-      alert('Gagal memutus koneksi')
+      alert(e.response?.data?.error || e.message || 'Gagal memutus koneksi')
     } finally { setBusy(false) }
   }
 

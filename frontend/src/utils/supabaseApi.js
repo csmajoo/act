@@ -739,9 +739,73 @@ const handlers = {
     }))
   },
 
-  // ── GOOGLE (not available in production) ──
+  // ── GOOGLE CALENDAR (via Supabase Edge Functions) ──
   async googleStatus() {
-    return { configured: false, connected: false }
+    const token = localStorage.getItem('auth_token')
+    const url = `${supabase.supabaseUrl}/functions/v1/google-status`
+    const res = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'apikey': supabase.supabaseKey
+      }
+    })
+    if (!res.ok) {
+      // Treat any error as "not configured"
+      return { configured: false, connected: false }
+    }
+    return await res.json()
+  },
+
+  async googleAuthUrl() {
+    const token = localStorage.getItem('auth_token')
+    const url = `${supabase.supabaseUrl}/functions/v1/google-auth-url`
+    const res = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'apikey': supabase.supabaseKey
+      }
+    })
+    if (!res.ok) {
+      const err = await res.json()
+      throw new Error(err.error || 'Failed to get Google auth URL')
+    }
+    return await res.json()
+  },
+
+  async googleDisconnect() {
+    const token = localStorage.getItem('auth_token')
+    const url = `${supabase.supabaseUrl}/functions/v1/google-disconnect`
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'apikey': supabase.supabaseKey
+      }
+    })
+    if (!res.ok) {
+      const err = await res.json()
+      throw new Error(err.error || 'Failed to disconnect')
+    }
+    return await res.json()
+  },
+
+  async googleEvent(action, payload) {
+    const token = localStorage.getItem('auth_token')
+    const url = `${supabase.supabaseUrl}/functions/v1/google-event`
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'apikey': supabase.supabaseKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ action, ...payload })
+    })
+    if (!res.ok) {
+      const err = await res.json()
+      throw new Error(err.error || `Failed to ${action} event`)
+    }
+    return await res.json()
   }
 }
 
@@ -782,9 +846,9 @@ class SupabaseAPI {
       if (endpoint === '/reports/summary') return ok(await handlers.getSummaryReports(params))
       if (endpoint === '/reports/detailed') return ok(await handlers.getDetailedReports(params))
 
-      // Google (not available)
+      // Google Calendar (via Edge Functions)
       if (endpoint === '/google/status') return ok(await handlers.googleStatus())
-      if (endpoint === '/google/auth-url') throw new Error('Google not available in production')
+      if (endpoint === '/google/auth-url') return ok(await handlers.googleAuthUrl())
 
       console.warn(`[SupabaseAPI] Unhandled GET: ${endpoint}`)
       return ok([])
@@ -816,8 +880,8 @@ class SupabaseAPI {
       // Templates
       if (endpoint === '/templates') return ok(await handlers.createTemplate(body))
 
-      // Google
-      if (endpoint === '/google/disconnect') return ok({ success: true })
+      // Google Calendar
+      if (endpoint === '/google/disconnect') return ok(await handlers.googleDisconnect())
 
       console.warn(`[SupabaseAPI] Unhandled POST: ${endpoint}`)
       return ok({ success: false, message: 'Endpoint not supported' })
