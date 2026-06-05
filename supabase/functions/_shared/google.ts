@@ -170,8 +170,8 @@ export function buildCalendarEvent(activity: any, includeMeet = false): any {
   if (includeMeet && activity.start_time) {
     event.conferenceData = {
       createRequest: {
-        requestId: `meet-${activity.id}-${Date.now()}`,
-        conferenceSolutionKey: { key: 'hangoutsMeet' }
+        requestId: `meet-${activity.id || 'new'}-${crypto.randomUUID().slice(0, 8)}`,
+        conferenceSolutionKey: { type: 'hangoutsMeet' }
       }
     }
   }
@@ -203,23 +203,27 @@ export async function createCalendarEvent(
     console.error('[createCalendarEvent] Failed:', err)
 
     // Try once more without Meet conference data if that was the issue
-    if (includeMeet && err.includes('conferenceData')) {
-      console.log('[createCalendarEvent] Retrying without Meet...')
-      delete event.conferenceData
+    const errLower = err.toLowerCase()
+    if (includeMeet && (errLower.includes('conference') || errLower.includes('hangouts'))) {
+      console.log('[createCalendarEvent] Retrying without Meet conference data...')
+      const eventWithoutMeet = { ...event }
+      delete eventWithoutMeet.conferenceData
+
       const retryRes = await fetch(`${GOOGLE_CALENDAR_API}/calendars/primary/events`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(event)
+        body: JSON.stringify(eventWithoutMeet)
       })
       if (retryRes.ok) {
         const data = await retryRes.json()
+        console.log('[createCalendarEvent] Success without Meet, eventId:', data.id)
         return data.id
       }
       const retryErr = await retryRes.text()
-      throw new Error(`Create event failed (after retry): ${retryErr}`)
+      throw new Error(`Create event failed (after retry without Meet): ${retryErr}`)
     }
 
     throw new Error(`Create event failed: ${err}`)
