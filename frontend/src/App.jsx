@@ -326,15 +326,11 @@ function Sidebar({ currentPage, setCurrentPage, currentUser, onLogout, isOpen, o
           borderLeft: `3px solid ${ROLE_COLOR[currentUser.role]}`
         }}>
           <div style={{ fontSize: '14px', fontWeight: 600 }}>{currentUser.name}</div>
-          <div style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '2px' }}>
-            <span style={{
-              background: ROLE_COLOR[currentUser.role], color: 'white',
-              padding: '1px 6px', borderRadius: '3px', fontSize: '11px', fontWeight: 700
-            }}>
-              {ROLE_LABEL[currentUser.role]}
-            </span>
-            {currentUser.area && <span style={{ marginLeft: '4px' }}>{currentUser.area}</span>}
-          </div>
+          {currentUser.area && (
+            <div style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '2px' }}>
+              {currentUser.area}
+            </div>
+          )}
           {currentUser.email && (
             <div style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '4px', wordBreak: 'break-all' }}>
               ✉ {currentUser.email}
