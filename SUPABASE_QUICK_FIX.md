@@ -1,86 +1,86 @@
-# 🗄️ Supabase Database Setup - SIMPLIFIED (No Errors)
+# 🗄️ Supabase Database Setup - DUPLICATE KEY ERROR FIX
 
-**Status**: 🔴 SQL syntax error found - **FIXED with new scripts**
-
----
-
-## ✅ The Problem
-Your SQL had `...` placeholder which is invalid syntax. I've created **2 complete SQL files** with NO errors.
+**Status**: 🔴 Duplicate key error - **FIXED with 2 options**
 
 ---
 
-## ✅ SOLUTION - Just 2 Steps
+## ❌ The Problem
+```
+ERROR: 23505: duplicate key value violates unique constraint "users_pkey"
+Key (id)=(1) already exists.
+```
 
-### **STEP 1: Create Tables**
-
-**Location**: https://app.supabase.com/project/fnkbvqrvcsnwnuhjkwbe/sql
-
-**Action**:
-1. Click "New Query"
-2. Open file: [SUPABASE_CREATE_TABLES.sql](SUPABASE_CREATE_TABLES.sql)
-3. **Copy ALL content** (no `...`, no incomplete statements)
-4. Paste in SQL Editor
-5. Click **RUN** button
-
-**Expected**: ✅ All tables created without errors
+This means **data was already inserted before**. When trying to insert again, it errors.
 
 ---
 
-### **STEP 2: Seed Data**
+## ✅ SOLUTION - Choose One Option
 
-**In same SQL Editor** (or create new query):
+### **Option A: Fresh Start (DELETE & RE-INSERT)**
 
-1. Open file: [SUPABASE_SEED_DATA.sql](SUPABASE_SEED_DATA.sql)
-2. **Copy ALL content**
-3. Paste in SQL Editor  
-4. Click **RUN** button
+If you want to **clear old data and start fresh**:
 
-**Expected**: ✅ Data inserted successfully
-- 7 users
-- 11 categories
-- 7 sources
+1. **Create NEW query** in Supabase SQL Editor
+2. Open file: [SUPABASE_RESET_DATA.sql](SUPABASE_RESET_DATA.sql)
+3. Copy & Paste entire content
+4. Click **RUN** → This deletes all old data
+5. **Then** run [SUPABASE_SEED_DATA.sql](SUPABASE_SEED_DATA.sql) again
+6. Click **RUN**
 
----
-
-## 📋 Files to Use
-
-| File | Purpose |
-|------|---------|
-| [SUPABASE_CREATE_TABLES.sql](SUPABASE_CREATE_TABLES.sql) | Create all 5 tables with indexes and RLS |
-| [SUPABASE_SEED_DATA.sql](SUPABASE_SEED_DATA.sql) | Insert users, categories, sources |
-
-**Key**: These files have **ZERO syntax errors** - copy & paste ready!
+✅ **Result**: Fresh database with clean data
 
 ---
 
-## ✅ Verify After Running
+### **Option B: Keep Existing Data (SKIP DUPLICATES)**
 
-1. **Go to**: Database → Tables (in Supabase)
-2. Check each table:
-   - ✅ users (7 rows)
-   - ✅ activity_categories (11 rows)
-   - ✅ activity_sources (7 rows)
-   - ✅ daily_activities (0 rows - ok)
-   - ✅ handover_tasks (0 rows - ok)
+If you want to **keep existing data** and only add missing records:
 
----
+1. **Create NEW query** in Supabase SQL Editor
+2. Open file: [SUPABASE_SEED_DATA.sql](SUPABASE_SEED_DATA.sql) ← **Updated with ON CONFLICT**
+3. Copy & Paste entire content
+4. Click **RUN**
 
-## ❌ Troubleshooting
-
-### Still getting syntax error?
-- Clear old query editor completely
-- Copy fresh from SUPABASE_CREATE_TABLES.sql
-- Make sure no `...` appears in your SQL
-
-### "relation already exists"?
-- Means tables already created - move to STEP 2
-
-### Data insert fails?
-- Make sure STEP 1 completed successfully first
-- Check that you ran in correct order
+✅ **Result**: Existing data kept, duplicates skipped, missing data added
 
 ---
 
-**Next**: After this is done → Enable GitHub Pages → Test live app
+## 📋 Files Available
+
+| File | Purpose | Use When |
+|------|---------|----------|
+| [SUPABASE_CREATE_TABLES.sql](SUPABASE_CREATE_TABLES.sql) | Create table schema | First time only |
+| [SUPABASE_SEED_DATA.sql](SUPABASE_SEED_DATA.sql) | Insert data (skip duplicates) | Default - safe |
+| [SUPABASE_RESET_DATA.sql](SUPABASE_RESET_DATA.sql) | Delete all data | Start fresh |
+
+---
+
+## 🎯 Quick Decision
+
+**Choose Option A if:**
+- Want completely fresh database
+- Don't care about old test data
+- Want clean slate
+
+**Choose Option B if:**
+- Want keep existing data
+- Just want to fill missing records
+- Don't want to lose anything
+
+---
+
+## ✅ After Running
+
+**Verify in Supabase Dashboard**:
+1. Go to: Database → Tables
+2. Click each table and verify:
+   - users: 7 rows
+   - activity_categories: 11 rows
+   - activity_sources: 7 rows
+
+---
+
+**Next Step**: Enable GitHub Pages → Test live app
 
 Created: 2026-06-05
+Updated: After duplicate key error encountered
+

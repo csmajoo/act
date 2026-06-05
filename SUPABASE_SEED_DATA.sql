@@ -1,7 +1,8 @@
 -- ✅ COMPLETE SEED DATA SCRIPT - READY TO COPY & PASTE
 -- Run this AFTER SUPABASE_CREATE_TABLES.sql
+-- Uses ON CONFLICT to skip duplicates (safe if data already exists)
 
--- Insert Users
+-- Insert Users (skip if duplicate)
 INSERT INTO users (id, name, role, team_leader_id, area, email) VALUES
 (1, 'Aan Sayudi', 'supervisor', NULL, 'Jakarta', 'aan.sayudi@majoo.id'),
 (4, 'Jhovan Hidayat', 'team_leader', NULL, 'Jabodetabek', 'jhovan@majoo.id'),
@@ -9,9 +10,10 @@ INSERT INTO users (id, name, role, team_leader_id, area, email) VALUES
 (6, 'Ridho Valentin', 'team_leader', NULL, 'Jabalnusra', 'ridho.valentin@majoo.id'),
 (7, 'Suro Rahadi', 'caretaker', 4, NULL, 'suro.rahardi@majoo.id'),
 (8, 'Taufiq Hadiyanto', 'caretaker', 6, NULL, 'taufiq.hadiyanto@majoo.id'),
-(9, 'Rahmat Hidayat', 'caretaker', 5, NULL, 'rahmat.hidayat@majoo.id');
+(9, 'Rahmat Hidayat', 'caretaker', 5, NULL, 'rahmat.hidayat@majoo.id')
+ON CONFLICT (id) DO NOTHING;
 
--- Insert Activity Categories
+-- Insert Activity Categories (skip if duplicate)
 INSERT INTO activity_categories (id, name) VALUES
 (8, 'Administrative & CRM Tasks'),
 (9, 'Special Projects'),
@@ -23,9 +25,10 @@ INSERT INTO activity_categories (id, name) VALUES
 (25, 'Coaching Teams'),
 (26, 'Assign Leads'),
 (27, 'Follow Up Data'),
-(28, 'Validasi H+1');
+(28, 'Validasi H+1')
+ON CONFLICT (id) DO NOTHING;
 
--- Insert Activity Sources
+-- Insert Activity Sources (skip if duplicate)
 INSERT INTO activity_sources (id, name) VALUES
 (6, 'CRM'),
 (7, 'Email'),
@@ -33,4 +36,5 @@ INSERT INTO activity_sources (id, name) VALUES
 (10, 'WhatsApp'),
 (13, 'Phone'),
 (16, 'Chat System'),
-(17, 'Ticket System');
+(17, 'Ticket System')
+ON CONFLICT (id) DO NOTHING;
