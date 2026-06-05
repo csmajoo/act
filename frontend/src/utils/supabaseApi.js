@@ -443,29 +443,48 @@ const handlers = {
     if (error) throw error
 
     // Sync to Google Calendar if requested
+    const syncErrors = []
+    let syncedCount = 0
     if (body.sync_google_calendar && data && data.length > 0) {
+      console.log(`[GCal Sync] Starting sync for ${data.length} activities...`)
       for (const act of data) {
         try {
           // Get full activity details (with names joined) for nice event description
           const fullAct = await fetchActivityForSync(act.id)
+          console.log(`[GCal Sync] Activity ${act.id}:`, fullAct)
+
           const result = await callGoogleEventFunction('create', {
             user_id: body.on_duty_user_id,
             activity: fullAct,
             include_meet: true
           })
+          console.log(`[GCal Sync] Result for ${act.id}:`, result)
+
           if (result?.event_id) {
             await supabase
               .from('daily_activities')
               .update({ google_event_id: result.event_id })
               .eq('id', act.id)
+            syncedCount++
           }
         } catch (e) {
-          console.error(`Google sync (create id=${act.id}) failed:`, e.message)
+          console.error(`[GCal Sync] Failed for id=${act.id}:`, e.message)
+          syncErrors.push(e.message)
         }
+      }
+      console.log(`[GCal Sync] Done. Synced: ${syncedCount}/${data.length}`)
+
+      // Show user-facing notification about sync errors
+      if (syncErrors.length > 0) {
+        const errMsg = syncErrors[0]
+        // Use setTimeout so the alert appears after the modal closes
+        setTimeout(() => {
+          alert(`⚠️ Activity tersimpan, tapi gagal sync ke Google Calendar:\n\n${errMsg}\n\nPastikan Google Calendar sudah terhubung dan Edge Functions sudah di-deploy.`)
+        }, 500)
       }
     }
 
-    return { id: data[0]?.id, count: data.length }
+    return { id: data[0]?.id, count: data.length, synced: syncedCount, syncErrors }
   },
 
   async updateActivity(id, body) {
@@ -488,12 +507,14 @@ const handlers = {
         const fullAct = await fetchActivityForSync(id)
         if (fullAct) {
           const action = fullAct.google_event_id ? 'update' : 'create'
+          console.log(`[GCal Sync] ${action} for activity ${id}`)
           const result = await callGoogleEventFunction(action, {
             user_id: fullAct.on_duty_user_id,
             activity: fullAct,
             event_id: fullAct.google_event_id,
             include_meet: true
           })
+          console.log(`[GCal Sync] Result:`, result)
           if (result?.event_id && result.event_id !== fullAct.google_event_id) {
             await supabase
               .from('daily_activities')
@@ -502,7 +523,10 @@ const handlers = {
           }
         }
       } catch (e) {
-        console.error(`Google sync (update id=${id}) failed:`, e.message)
+        console.error(`[GCal Sync] Failed for update id=${id}:`, e.message)
+        setTimeout(() => {
+          alert(`⚠️ Activity ter-update, tapi gagal sync ke Google Calendar:\n\n${e.message}`)
+        }, 500)
       }
     }
 
