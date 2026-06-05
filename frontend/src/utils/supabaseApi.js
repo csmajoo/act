@@ -67,6 +67,57 @@ const fail = (error) => Promise.reject({
   message: error.message || error
 })
 
+// Fetch a single activity with joined names, for Google Calendar sync
+async function fetchActivityForSync(id) {
+  const { data } = await supabase
+    .from('daily_activities')
+    .select(`
+      id, on_duty_user_id, activity_date, activity_name,
+      duration, start_time, end_time, notes, google_event_id,
+      activity_categories(name),
+      activity_sources(name),
+      users!daily_activities_on_duty_user_id_fkey(name)
+    `)
+    .eq('id', id)
+    .single()
+
+  if (!data) return null
+  return {
+    id: data.id,
+    on_duty_user_id: data.on_duty_user_id,
+    activity_date: data.activity_date,
+    activity_name: data.activity_name,
+    duration: data.duration,
+    start_time: data.start_time,
+    end_time: data.end_time,
+    notes: data.notes,
+    google_event_id: data.google_event_id,
+    category_name: data.activity_categories?.name,
+    source_name: data.activity_sources?.name,
+    on_duty_name: data.users?.name
+  }
+}
+
+// Call google-event Edge Function
+async function callGoogleEventFunction(action, payload) {
+  const token = localStorage.getItem('auth_token')
+  const url = `${supabase.supabaseUrl}/functions/v1/google-event`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'apikey': supabase.supabaseKey,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ action, ...payload })
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `Failed to ${action} event`)
+  }
+  return await res.json()
+}
+
 // ============================================================
 // HANDLERS
 // ============================================================
@@ -390,6 +441,30 @@ const handlers = {
     }))
     const { data, error } = await supabase.from('daily_activities').insert(rows).select()
     if (error) throw error
+
+    // Sync to Google Calendar if requested
+    if (body.sync_google_calendar && data && data.length > 0) {
+      for (const act of data) {
+        try {
+          // Get full activity details (with names joined) for nice event description
+          const fullAct = await fetchActivityForSync(act.id)
+          const result = await callGoogleEventFunction('create', {
+            user_id: body.on_duty_user_id,
+            activity: fullAct,
+            include_meet: true
+          })
+          if (result?.event_id) {
+            await supabase
+              .from('daily_activities')
+              .update({ google_event_id: result.event_id })
+              .eq('id', act.id)
+          }
+        } catch (e) {
+          console.error(`Google sync (create id=${act.id}) failed:`, e.message)
+        }
+      }
+    }
+
     return { id: data[0]?.id, count: data.length }
   },
 
@@ -406,10 +481,50 @@ const handlers = {
     }
     const { error } = await supabase.from('daily_activities').update(payload).eq('id', id)
     if (error) throw error
+
+    // Sync to Google Calendar if requested
+    if (body.sync_google_calendar) {
+      try {
+        const fullAct = await fetchActivityForSync(id)
+        if (fullAct) {
+          const action = fullAct.google_event_id ? 'update' : 'create'
+          const result = await callGoogleEventFunction(action, {
+            user_id: fullAct.on_duty_user_id,
+            activity: fullAct,
+            event_id: fullAct.google_event_id,
+            include_meet: true
+          })
+          if (result?.event_id && result.event_id !== fullAct.google_event_id) {
+            await supabase
+              .from('daily_activities')
+              .update({ google_event_id: result.event_id })
+              .eq('id', id)
+          }
+        }
+      } catch (e) {
+        console.error(`Google sync (update id=${id}) failed:`, e.message)
+      }
+    }
+
     return { success: true }
   },
 
   async deleteActivity(id) {
+    // Get activity first to know if it has a Google event to delete
+    try {
+      const act = await fetchActivityForSync(id)
+      if (act?.google_event_id) {
+        try {
+          await callGoogleEventFunction('delete', {
+            user_id: act.on_duty_user_id,
+            event_id: act.google_event_id
+          })
+        } catch (e) {
+          console.error(`Google sync (delete id=${id}) failed:`, e.message)
+        }
+      }
+    } catch {}
+
     const { error } = await supabase.from('daily_activities').delete().eq('id', id)
     if (error) throw error
     return { success: true }
