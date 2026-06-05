@@ -14,10 +14,10 @@ export const getApiBaseUrl = () => {
     return 'http://localhost:5000/api'
   }
   // Production - check if using Supabase
-  if (process.env.REACT_APP_USE_SUPABASE === 'true') {
+  if (import.meta.env.VITE_USE_SUPABASE === 'true') {
     return 'supabase'  // Special flag to indicate Supabase mode
   }
-  return process.env.REACT_APP_API_URL || null
+  return import.meta.env.VITE_API_URL || null
 }
 
 export const isSupabaseMode = () => {
