@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { supabase } from '../utils/supabase'
+import api from '../utils/api'
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('')
@@ -13,43 +13,33 @@ export default function Login({ onLogin }) {
       setError('Email dan password harus diisi')
       return
     }
-    
+
     setLoading(true)
     setError('')
-    
+
     try {
-      // Authenticate with Supabase
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
+      // Use custom auth via api wrapper (works with both Node.js backend and Supabase mode)
+      const res = await api.post('/auth/login', {
         email: email.trim(),
         password: password.trim()
       })
-      
-      if (authError) {
-        setError(authError.message === 'Invalid login credentials' ? 'Email atau password salah' : authError.message)
-        setLoading(false)
-        return
-      }
 
-      // Get user profile from users table
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email.trim())
-        .single()
-      
-      if (userError) {
-        setError('User profile tidak ditemukan')
+      const { token, user } = res.data
+
+      if (!token || !user) {
+        setError('Login gagal: response tidak valid')
         setLoading(false)
         return
       }
 
       // Store auth token and user info
-      localStorage.setItem('auth_token', data.session.access_token)
-      localStorage.setItem('auth_user', JSON.stringify(userData))
-      
-      onLogin(userData)
+      localStorage.setItem('auth_token', token)
+      localStorage.setItem('auth_user', JSON.stringify(user))
+
+      onLogin(user, token)
     } catch (err) {
-      setError(err.message || 'Login gagal')
+      const errMsg = err.response?.data?.error || err.message || 'Login gagal'
+      setError(errMsg)
     } finally {
       setLoading(false)
     }
@@ -125,7 +115,7 @@ export default function Login({ onLogin }) {
               <div style={{
                 padding: '10px 12px', background: '#fee2e2', color: '#991b1b',
                 border: '1px solid #fecaca', borderRadius: '6px',
-                fontSize: '15px', marginBottom: '14px'
+                fontSize: '14px', marginBottom: '14px', wordBreak: 'break-word'
               }}>{error}</div>
             )}
 
