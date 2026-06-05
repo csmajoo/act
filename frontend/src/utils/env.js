@@ -11,10 +11,17 @@ export const isDevelopment = () => {
 
 export const getApiBaseUrl = () => {
   if (isDevelopment()) {
-    return 'http://localhost:5080'
+    return 'http://localhost:5000/api'
   }
-  // Production - no backend API available
-  return null
+  // Production - check if using Supabase
+  if (process.env.REACT_APP_USE_SUPABASE === 'true') {
+    return 'supabase'  // Special flag to indicate Supabase mode
+  }
+  return process.env.REACT_APP_API_URL || null
+}
+
+export const isSupabaseMode = () => {
+  return getApiBaseUrl() === 'supabase'
 }
 
 console.log(`[Environment] Running in ${isProduction() ? 'PRODUCTION' : 'DEVELOPMENT'} mode`)
