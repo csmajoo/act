@@ -271,7 +271,7 @@ function Sidebar({ currentPage, setCurrentPage, currentUser, onLogout, isOpen, o
       }}>
         {/* Majoo Official Logo */}
         <img
-          src="/logo-majoo.svg"
+          src={`${import.meta.env.BASE_URL}logo-majoo.svg`}
           alt="Majoo Logo"
           style={{ height: '48px', flexShrink: 0, objectFit: 'contain' }}
         />
