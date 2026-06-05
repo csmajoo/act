@@ -139,26 +139,41 @@ const handlers = {
   },
 
   async changePassword(body) {
-    const token = localStorage.getItem('auth_token')
-    if (!token) throw new Error('Not authenticated')
-
     const { old_password, new_password } = body
     if (!old_password || !new_password) throw new Error('Password lama dan baru wajib diisi')
     if (new_password.length < 6) throw new Error('Password baru minimal 6 karakter')
 
-    // Get current session and user
-    const { data: session, error: sessionError } = await supabase
-      .from('sessions')
-      .select('user_id')
-      .eq('token', token)
-      .single()
+    // Get current user ID - try session first, fallback to localStorage
+    let userId = null
 
-    if (sessionError || !session) throw new Error('Session tidak ditemukan')
+    const token = localStorage.getItem('auth_token')
+    if (token) {
+      const { data: session } = await supabase
+        .from('sessions')
+        .select('user_id')
+        .eq('token', token)
+        .maybeSingle()
+      if (session) userId = session.user_id
+    }
 
+    // Fallback: get user from localStorage cached auth_user
+    if (!userId) {
+      const cachedUser = localStorage.getItem('auth_user')
+      if (cachedUser) {
+        try {
+          const u = JSON.parse(cachedUser)
+          if (u?.id) userId = u.id
+        } catch {}
+      }
+    }
+
+    if (!userId) throw new Error('User tidak terautentikasi. Silakan login ulang.')
+
+    // Get current password from DB
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('password_hash')
-      .eq('id', session.user_id)
+      .eq('id', userId)
       .single()
 
     if (userError || !user) throw new Error('User tidak ditemukan')
@@ -172,9 +187,9 @@ const handlers = {
     const { error: updateError } = await supabase
       .from('users')
       .update({ password_hash: new_password })
-      .eq('id', session.user_id)
+      .eq('id', userId)
 
-    if (updateError) throw updateError
+    if (updateError) throw new Error('Gagal update password: ' + updateError.message)
 
     return { success: true }
   },
