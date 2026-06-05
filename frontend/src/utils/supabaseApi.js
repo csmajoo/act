@@ -689,18 +689,22 @@ const handlers = {
 
     const activityDate = body.activity_date || task.assigned_date
     const startTime = body.start_time || null
-    let endTime = null
-    if (startTime && task.duration) {
+    let endTime = body.end_time || null
+    if (startTime && !endTime && (body.duration || task.duration)) {
+      const dur = body.duration || task.duration
       const [h, m] = startTime.split(':').map(Number)
-      const total = h * 60 + m + task.duration
+      const total = h * 60 + m + dur
       const eh = Math.floor((total % 1440) / 60), em = total % 60
       endTime = `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`
     }
 
+    // Determine on_duty_user_id - if body specifies it, use that
+    const onDutyUserId = body.on_duty_user_id || task.assigned_to_user_id
+
     // Create activity
     const activityPayload = {
       team_leader_id: task.team_leader_id,
-      on_duty_user_id: task.assigned_to_user_id,
+      on_duty_user_id: onDutyUserId,
       activity_date: activityDate,
       category_id: body.category_id || task.category_id,
       activity_name: body.activity_name || task.task_name,
@@ -711,7 +715,11 @@ const handlers = {
       notes: body.notes || task.notes
     }
 
-    const { error: actError } = await supabase.from('daily_activities').insert([activityPayload])
+    const { data: newActs, error: actError } = await supabase
+      .from('daily_activities')
+      .insert([activityPayload])
+      .select()
+
     if (actError) throw actError
 
     // Mark task as processed
@@ -720,7 +728,39 @@ const handlers = {
       .update({ is_processed: 1, processed_at: new Date().toISOString() })
       .eq('id', taskId)
 
-    return { success: true }
+    // Sync to Google Calendar if requested
+    let syncedCount = 0
+    if (body.sync_google_calendar && newActs && newActs.length > 0) {
+      console.log(`[GCal Sync] Processing task - syncing ${newActs.length} activities...`)
+      for (const act of newActs) {
+        try {
+          const fullAct = await fetchActivityForSync(act.id)
+          console.log(`[GCal Sync] Activity ${act.id}:`, fullAct)
+
+          const result = await callGoogleEventFunction('create', {
+            user_id: onDutyUserId,
+            activity: fullAct,
+            include_meet: true
+          })
+          console.log(`[GCal Sync] Result:`, result)
+
+          if (result?.event_id) {
+            await supabase
+              .from('daily_activities')
+              .update({ google_event_id: result.event_id })
+              .eq('id', act.id)
+            syncedCount++
+          }
+        } catch (e) {
+          console.error(`[GCal Sync] Failed for id=${act.id}:`, e.message)
+          setTimeout(() => {
+            alert(`⚠️ Task ter-proses, tapi gagal sync ke Google Calendar:\n\n${e.message}`)
+          }, 500)
+        }
+      }
+    }
+
+    return { success: true, synced: syncedCount }
   },
 
   async deleteTask(id) {
