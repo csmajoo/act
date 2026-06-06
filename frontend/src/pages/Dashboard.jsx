@@ -58,14 +58,8 @@ export default function Dashboard({ teamLeaders, users = [], currentUser }) {
     try {
       setLoading(true)
       const params = { startDate, endDate }
-      // Check if selected filter is a supervisor (not a team leader)
-      const selectedUser = users.find(u => u.id === parseInt(filterTL))
-      if (filterTL && selectedUser?.role === 'supervisor') {
-        // For supervisor: filter by userId (their own activities)
-        params.userId = filterTL
-      } else if (filterTL) {
-        params.teamLeaderId = filterTL
-      }
+      // Filter by individual user (works for all roles: supervisor, TL, caretaker)
+      if (filterTL) params.userId = filterTL
       const res = await api.get('/reports/dashboard', { params })
       setData(res.data)
     } catch (err) {
@@ -112,30 +106,23 @@ export default function Dashboard({ teamLeaders, users = [], currentUser }) {
         padding: '14px 20px', marginBottom: '20px', display: 'flex', gap: '12px',
         flexWrap: 'wrap', alignItems: 'flex-end'
       }}>
-        {/* Area */}
+        {/* Leader (per user) */}
         <div style={{ flex: '0 0 auto' }}>
-          <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-light)', display: 'block', marginBottom: '4px' }}>AREA</label>
-          <select value={filterArea} onChange={e => handleAreaChange(e.target.value)}
-            style={{ padding: '7px 10px', fontSize: '13px', border: '1px solid var(--border)', borderRadius: '6px', minWidth: '140px' }}>
-            <option value="">Semua Area</option>
-            {areas.map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
-        </div>
-
-        {/* Team Leader */}
-        <div style={{ flex: '0 0 auto' }}>
-          <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-light)', display: 'block', marginBottom: '4px' }}>TEAM LEADER</label>
+          <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-light)', display: 'block', marginBottom: '4px' }}>LEADER</label>
           <select value={filterTL} onChange={e => setFilterTL(e.target.value)}
-            style={{ padding: '7px 10px', fontSize: '13px', border: '1px solid var(--border)', borderRadius: '6px', minWidth: '160px' }}>
+            style={{ padding: '7px 10px', fontSize: '13px', border: '1px solid var(--border)', borderRadius: '6px', minWidth: '180px' }}>
             <option value="">Semua</option>
-            {supervisors.length > 0 && (
-              <optgroup label="Supervisor">
-                {supervisors.map(sv => <option key={sv.id} value={sv.id}>{sv.name}</option>)}
-              </optgroup>
-            )}
-            <optgroup label="Team Leader">
-              {filteredTLs.map(tl => <option key={tl.id} value={tl.id}>{tl.name}</option>)}
-            </optgroup>
+            {users
+              .filter(u => u.role === 'supervisor' || u.role === 'team_leader' || u.role === 'caretaker')
+              .sort((a, b) => {
+                // Sort by role priority then by name
+                const rolePriority = { supervisor: 1, team_leader: 2, caretaker: 3 }
+                const rp = (rolePriority[a.role] || 99) - (rolePriority[b.role] || 99)
+                return rp !== 0 ? rp : a.name.localeCompare(b.name)
+              })
+              .map(u => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
           </select>
         </div>
 
