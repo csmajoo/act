@@ -25,9 +25,21 @@ export default function TemplateManagement({ teamLeaders, users = [], categories
 
   useEffect(() => {
     if (teamLeaders.length > 0 && !selectedTeamLeader) {
-      setSelectedTeamLeader(teamLeaders[0].id)
+      // Default to current user's team if available, else first TL
+      let defaultTL = null
+      if (currentUser?.role === 'team_leader') {
+        defaultTL = currentUser.id
+      } else if (currentUser?.role === 'caretaker' && currentUser.team_leader_id) {
+        defaultTL = currentUser.team_leader_id
+      }
+      // Verify the default is in visible team leaders
+      if (defaultTL && teamLeaders.find(tl => tl.id === defaultTL)) {
+        setSelectedTeamLeader(defaultTL)
+      } else {
+        setSelectedTeamLeader(teamLeaders[0].id)
+      }
     }
-  }, [teamLeaders])
+  }, [teamLeaders, currentUser])
 
   useEffect(() => {
     if (selectedTeamLeader) loadTemplates()
@@ -239,17 +251,6 @@ export default function TemplateManagement({ teamLeaders, users = [], categories
 
       <div className="card mb-20">
         <div className="form-row">
-          <div className="form-group">
-            <label>Team Leader</label>
-            <select
-              value={selectedTeamLeader || ''}
-              onChange={e => setSelectedTeamLeader(parseInt(e.target.value))}
-            >
-              {teamLeaders.map(tl => (
-                <option key={tl.id} value={tl.id}>{tl.name} - {tl.area}</option>
-              ))}
-            </select>
-          </div>
           <div className="form-group">
             <label>Filter Template</label>
             <select
