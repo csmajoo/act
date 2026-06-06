@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import api from '../utils/api'
+import toast from '../utils/toast'
+import confirm from '../utils/confirm'
 
 const ROLE_LABEL = { supervisor: 'Supervisor', team_leader: 'Team Leader', caretaker: 'Caretaker' }
 const ROLE_COLOR = { supervisor: '#0D7A71', team_leader: '#17A697', caretaker: '#FFC107' }
@@ -54,11 +56,11 @@ export default function UserManagement({ onDataUpdated }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!formData.name || !formData.role) {
-      alert('Nama dan role harus diisi')
+      toast.error('Nama dan role harus diisi')
       return
     }
     if (formData.role === 'caretaker' && !formData.team_leader_id) {
-      alert('Caretaker harus assigned ke Team Leader')
+      toast.error('Caretaker harus assigned ke Team Leader')
       return
     }
 
@@ -73,8 +75,10 @@ export default function UserManagement({ onDataUpdated }) {
     try {
       if (editingUser) {
         await api.put(`/users/${editingUser.id}`, payload)
+        toast.success(`User "${formData.name}" berhasil diupdate`)
       } else {
         await api.post('/users', payload)
+        toast.success(`User "${formData.name}" berhasil ditambahkan`)
       }
       setModalOpen(false)
       setEditingUser(null)
@@ -82,18 +86,26 @@ export default function UserManagement({ onDataUpdated }) {
       loadUsers()
       onDataUpdated?.()
     } catch (err) {
-      alert(`Gagal: ${err.response?.data?.error || err.message}`)
+      toast.error(`Gagal: ${err.response?.data?.error || err.message}`)
     }
   }
 
   const handleDelete = async (user) => {
-    if (!confirm(`Hapus user "${user.name}"?\n\nUser dengan aktivitas atau task tersisa tidak bisa dihapus.`)) return
+    const ok = await confirm.ask({
+      title: 'Hapus User',
+      message: `Yakin ingin menghapus user "${user.name}"?\n\nUser dengan aktivitas atau task tersisa tidak bisa dihapus.`,
+      confirmText: '🗑 Hapus',
+      cancelText: 'Batal',
+      danger: true
+    })
+    if (!ok) return
     try {
       await api.delete(`/users/${user.id}`)
+      toast.success(`User "${user.name}" berhasil dihapus`)
       loadUsers()
       onDataUpdated?.()
     } catch (err) {
-      alert(err.response?.data?.error || 'Gagal hapus user')
+      toast.error(err.response?.data?.error || 'Gagal hapus user')
     }
   }
 

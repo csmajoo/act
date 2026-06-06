@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import api from '../utils/api'
 import toast from '../utils/toast'
+import confirm from '../utils/confirm'
 
 const ROLE_LABEL = { supervisor: 'Supervisor', team_leader: 'Team Leader', caretaker: 'Caretaker' }
 const ROLE_COLOR = { supervisor: '#0D7A71', team_leader: '#17A697', caretaker: '#FFC107' }
@@ -195,7 +196,7 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
   const handleSaveDuration = async (act) => {
     const newDur = parseInt(editingDurations[act.id])
     if (isNaN(newDur) || newDur <= 0) {
-      alert('Durasi harus angka positif')
+      toast.error('Durasi harus angka positif')
       return
     }
     
@@ -235,7 +236,7 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
     } catch (err) {
       console.error(`❌ [${new Date().toLocaleTimeString()}] Exception in handleSaveDuration:`, err)
       console.error(`Error response:`, err.response?.data)
-      alert(`Gagal memperbarui durasi: ${err.response?.data?.error || err.message}`)
+      toast.error(`Gagal memperbarui durasi: ${err.response?.data?.error || err.message}`)
     } finally {
       setSavingId(null)
     }
@@ -267,7 +268,7 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
 
       if (response.success === false) {
         console.error(`❌ API returned error: ${response.error}`)
-        alert(`Gagal memperbarui status activity: ${response.error || 'Unknown error'}`)
+        toast.error(`Gagal memperbarui status activity: ${response.error || "Unknown error"}`)
         setSavingId(null)
         return
       }
@@ -292,7 +293,7 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
       console.error(`❌ [${new Date().toLocaleTimeString()}] Exception in handleToggleDone:`, err)
       console.error(`Error message: ${err.message}`)
       console.error(`Error response:`, err.response?.data)
-      alert(`Gagal memperbarui status activity: ${err.response?.data?.error || err.message}`)
+      toast.error(`Gagal memperbarui status activity: ${err.response?.data?.error || err.message}`)
     } finally {
       setSavingId(null)
     }
@@ -319,19 +320,25 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
 
   // Handle Delete Activity
   const handleDeleteActivity = async (act) => {
-    if (!window.confirm(`Hapus aktivitas "${act.activity_name}"?`)) {
-      return
-    }
+    const ok = await confirm.ask({
+      title: 'Hapus Aktivitas',
+      message: `Yakin ingin menghapus aktivitas "${act.activity_name}"?`,
+      confirmText: '🗑 Hapus',
+      cancelText: 'Batal',
+      danger: true
+    })
+    if (!ok) return
 
     setSavingId(act.id)
     try {
       console.log(`🗑️ Deleting activity ${act.id}`)
       await api.delete(`/activities/${act.id}`)
       console.log(`✅ Activity deleted`)
+      toast.success('Aktivitas berhasil dihapus')
       await loadActivities()
     } catch (err) {
       console.error(`❌ Error deleting activity:`, err)
-      alert(`Gagal menghapus aktivitas: ${err.response?.data?.error || err.message}`)
+      toast.error(`Gagal menghapus aktivitas: ${err.response?.data?.error || err.message}`)
     } finally {
       setSavingId(null)
     }
@@ -347,7 +354,7 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
   // Handle Submit Handover
   const handleSubmitHandover = async () => {
     if (!handoverUserId) {
-      alert('Pilih user untuk di-handover')
+      toast.error('Pilih user untuk di-handover')
       return
     }
 
@@ -391,14 +398,14 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
       // Delete the original activity after handover
       await api.delete(`/activities/${handoverActivityId}`)
       
-      alert(`✓ Aktivitas diserahkan ke ${targetUser.name}`)
+      toast.success(`Aktivitas diserahkan ke ${targetUser.name}`)
       setShowHandoverModal(false)
       setHandoverActivityId(null)
       setHandoverUserId(null)
       await loadActivities()
     } catch (err) {
       console.error(`❌ Error in handover:`, err)
-      alert(`Gagal serahkan aktivitas: ${err.response?.data?.error || err.message}`)
+      toast.error(`Gagal serahkan aktivitas: ${err.response?.data?.error || err.message}`)
     } finally {
       setSavingId(null)
     }
@@ -430,18 +437,18 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
     e?.preventDefault?.()
 
     if (!createForm.activity_name.trim()) {
-      alert('Nama aktivitas tidak boleh kosong')
+      toast.error('Nama aktivitas tidak boleh kosong')
       return
     }
     
     if (!createForm.category_id) {
-      alert('Pilih kategori aktivitas')
+      toast.error('Pilih kategori aktivitas')
       return
     }
     
     const duration = parseInt(createForm.duration)
     if (isNaN(duration) || duration <= 0) {
-      alert('Durasi harus angka positif')
+      toast.error('Durasi harus angka positif')
       return
     }
     
@@ -450,7 +457,7 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
       // If in handover mode, validate target user selection
       if (isHandoverMode) {
         if (!handoverTargetUserId) {
-          alert('Pilih user untuk di-handover')
+          toast.error('Pilih user untuk di-handover')
           setCreatingActivity(false)
           return
         }

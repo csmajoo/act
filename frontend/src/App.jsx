@@ -820,8 +820,9 @@ function GoogleCalendarButton() {
     if (g === 'connected') {
       setTimeout(loadStatus, 300)
       window.history.replaceState({}, '', window.location.pathname)
+      toast.success('Google Calendar berhasil terhubung!')
     } else if (g === 'error') {
-      alert('Gagal menghubungkan Google Calendar: ' + (params.get('msg') || 'unknown'))
+      toast.error('Gagal menghubungkan Google Calendar: ' + (params.get('msg') || 'unknown'))
       window.history.replaceState({}, '', window.location.pathname)
     }
   }, [])
@@ -832,13 +833,20 @@ function GoogleCalendarButton() {
       const res = await api.get('/google/auth-url')
       window.location.href = res.data.url // full-page redirect to Google consent
     } catch (e) {
-      alert(e.response?.data?.error || e.message || 'Gagal memulai koneksi Google')
+      toast.error(e.response?.data?.error || e.message || 'Gagal memulai koneksi Google')
       setBusy(false)
     }
   }
 
   const handleDisconnect = async () => {
-    if (!confirm('Putuskan koneksi Google Calendar? Aktivitas baru tidak akan tersinkron lagi.')) return
+    const ok = await confirm.ask({
+      title: 'Putuskan Google Calendar',
+      message: 'Yakin ingin memutus koneksi Google Calendar? Aktivitas baru tidak akan tersinkron lagi.',
+      confirmText: '🔌 Putuskan',
+      cancelText: 'Batal',
+      danger: true
+    })
+    if (!ok) return
     setBusy(true)
     try {
       await api.post('/google/disconnect')

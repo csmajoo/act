@@ -330,7 +330,7 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
 
   const validateForm = () => {
     if (!formData.on_duty_user_id || !formData.category_id || !formData.activity_name.trim() || !formData.duration) {
-      alert('User, kategori, nama activity, dan durasi harus diisi')
+      toast.error('User, kategori, nama activity, dan durasi harus diisi')
       return false
     }
     return true
@@ -394,7 +394,7 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
     if (!validateForm()) return
     // For supervisor, require team leader selection
     if (currentUser.role === 'supervisor' && !supervisorHandoverTeamLeaderId) {
-      alert('Pilih Tim Leader untuk handover')
+      toast.error('Pilih Tim Leader untuk handover')
       return
     }
     try {
@@ -898,7 +898,7 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
                           })
                           loadAll()
                         } catch (err) {
-                          alert('Gagal mengubah status')
+                          toast.error('Gagal mengubah status')
                         }
                       }}
                       title="Klik untuk mengubah status"

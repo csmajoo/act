@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import toast from './toast'
 
 /**
  * Comprehensive Supabase API service that mimics the Node.js backend API.
@@ -481,9 +482,9 @@ const handlers = {
       // Show user-facing notification about sync errors
       if (syncErrors.length > 0) {
         const errMsg = syncErrors[0]
-        // Use setTimeout so the alert appears after the modal closes
+        // Show toast notification after modal closes
         setTimeout(() => {
-          alert(`⚠️ Activity tersimpan, tapi gagal sync ke Google Calendar:\n\n${errMsg}\n\nPastikan Google Calendar sudah terhubung dan Edge Functions sudah di-deploy.`)
+          toast.warning(`Activity tersimpan, tapi gagal sync ke Google Calendar: ${errMsg}`)
         }, 500)
       }
     }
@@ -541,7 +542,7 @@ const handlers = {
       } catch (e) {
         console.error(`[GCal Sync] Failed for update id=${id}:`, e.message)
         setTimeout(() => {
-          alert(`⚠️ Activity ter-update, tapi gagal sync ke Google Calendar:\n\n${e.message}`)
+          toast.warning(`Activity ter-update, tapi gagal sync ke Google Calendar: ${e.message}`)
         }, 500)
       }
     }
@@ -770,7 +771,7 @@ const handlers = {
         } catch (e) {
           console.error(`[GCal Sync] Failed for id=${act.id}:`, e.message)
           setTimeout(() => {
-            alert(`⚠️ Task ter-proses, tapi gagal sync ke Google Calendar:\n\n${e.message}`)
+            toast.warning(`Task ter-proses, tapi gagal sync ke Google Calendar: ${e.message}`)
           }, 500)
         }
       }

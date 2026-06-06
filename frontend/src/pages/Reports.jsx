@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import api from '../utils/api'
+import toast from '../utils/toast'
 
 export default function Reports({ teamLeaders }) {
   const [selectedTeamLeader, setSelectedTeamLeader] = useState(null)
@@ -77,7 +78,7 @@ export default function Reports({ teamLeaders }) {
       link.parentElement.removeChild(link)
     } catch (error) {
       console.error('Failed to export:', error)
-      alert('Gagal mengexport laporan')
+      toast.error('Gagal mengexport laporan')
     }
   }
 
