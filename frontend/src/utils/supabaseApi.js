@@ -485,41 +485,48 @@ const handlers = {
     // Sync to Google Calendar if requested
     const syncErrors = []
     let syncedCount = 0
+    const GCAL_SYNC_LIMIT = 30  // safety limit for recurring activities
     if (body.sync_google_calendar && data && data.length > 0) {
-      console.log(`[GCal Sync] Starting sync for ${data.length} activities...`)
-      for (const act of data) {
-        try {
-          // Get full activity details (with names joined) for nice event description
-          const fullAct = await fetchActivityForSync(act.id)
-          console.log(`[GCal Sync] Activity ${act.id}:`, fullAct)
+      const toSync = data.slice(0, GCAL_SYNC_LIMIT)
+      const skippedCount = data.length - toSync.length
+      console.log(`[GCal Sync] Starting parallel sync for ${toSync.length}/${data.length} activities...`)
 
+      // Use Promise.all for parallel sync (much faster than sequential)
+      const syncPromises = toSync.map(async (act) => {
+        try {
+          const fullAct = await fetchActivityForSync(act.id)
           const result = await callGoogleEventFunction('create', {
             user_id: body.on_duty_user_id,
             activity: fullAct,
             include_meet: true
           })
-          console.log(`[GCal Sync] Result for ${act.id}:`, result)
-
           if (result?.event_id) {
             await supabase
               .from('daily_activities')
               .update({ google_event_id: result.event_id })
               .eq('id', act.id)
-            syncedCount++
+            return { success: true }
           }
+          return { success: false, error: 'No event_id' }
         } catch (e) {
           console.error(`[GCal Sync] Failed for id=${act.id}:`, e.message)
-          syncErrors.push(e.message)
+          return { success: false, error: e.message }
         }
-      }
-      console.log(`[GCal Sync] Done. Synced: ${syncedCount}/${data.length}`)
+      })
 
-      // Show user-facing notification about sync errors
-      if (syncErrors.length > 0) {
-        const errMsg = syncErrors[0]
-        // Show toast notification after modal closes
+      const results = await Promise.all(syncPromises)
+      syncedCount = results.filter(r => r.success).length
+      results.filter(r => !r.success).forEach(r => syncErrors.push(r.error))
+      console.log(`[GCal Sync] Done. Synced: ${syncedCount}/${toSync.length} (${skippedCount} skipped due to limit)`)
+
+      // Show notifications
+      if (skippedCount > 0) {
         setTimeout(() => {
-          toast.warning(`Activity tersimpan, tapi gagal sync ke Google Calendar: ${errMsg}`)
+          toast.warning(`${syncedCount} aktivitas ter-sync ke Google Calendar. ${skippedCount} sisanya tidak di-sync (limit ${GCAL_SYNC_LIMIT} untuk performa).`)
+        }, 500)
+      } else if (syncErrors.length > 0) {
+        setTimeout(() => {
+          toast.warning(`Sync ke Google Calendar gagal: ${syncErrors[0]}`)
         }, 500)
       }
     }

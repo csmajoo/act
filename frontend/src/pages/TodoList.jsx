@@ -47,6 +47,7 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
     repeat_end_date: ''
   })
   const [creatingActivity, setCreatingActivity] = useState(false)
+  const [creatingLabel, setCreatingLabel] = useState('') // 'save' or 'gcal'
   
   // Handover modal state
   const [showHandoverModal, setShowHandoverModal] = useState(false)
@@ -521,12 +522,14 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
     }
     
     setCreatingActivity(true)
+    setCreatingLabel(syncGoogle ? 'gcal' : 'save')
     try {
       // If in handover mode, validate target user selection
       if (isHandoverMode) {
         if (!handoverTargetUserId) {
           toast.error('Pilih user untuk di-handover')
           setCreatingActivity(false)
+          setCreatingLabel('')
           return
         }
         
@@ -686,6 +689,7 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
       toast.error(`Gagal membuat aktivitas: ${err.response?.data?.error || err.message}`)
     } finally {
       setCreatingActivity(false)
+      setCreatingLabel('')
     }
   }
 
@@ -1509,9 +1513,15 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
                   onClick={(e) => handleCreateActivity(e, false)}
                   className="btn btn-success btn-sm"
                   disabled={creatingActivity}
-                  style={{ background: isHandoverMode ? '#3B82F6' : '#5DD65D', borderColor: isHandoverMode ? '#3B82F6' : '#5DD65D' }}
+                  style={{
+                    background: isHandoverMode ? '#3B82F6' : '#5DD65D',
+                    borderColor: isHandoverMode ? '#3B82F6' : '#5DD65D',
+                    opacity: creatingActivity && creatingLabel !== 'save' ? 0.6 : 1
+                  }}
                 >
-                  {creatingActivity ? '⏳ Menyimpan...' : (isHandoverMode ? '→ Serahkan Aktivitas' : '✓ Simpan Aktivitas')}
+                  {creatingActivity && creatingLabel === 'save'
+                    ? '⏳ Menyimpan...'
+                    : (isHandoverMode ? '→ Serahkan Aktivitas' : '✓ Simpan Aktivitas')}
                 </button>
                 {!isHandoverMode && (
                   <button
@@ -1519,9 +1529,16 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
                     onClick={(e) => handleCreateActivity(e, true)}
                     className="btn btn-sm"
                     disabled={creatingActivity}
-                    style={{ background: '#17A697', borderColor: '#17A697', color: 'white' }}
+                    style={{
+                      background: '#17A697',
+                      borderColor: '#17A697',
+                      color: 'white',
+                      opacity: creatingActivity && creatingLabel !== 'gcal' ? 0.6 : 1
+                    }}
                   >
-                    {creatingActivity ? '⏳ ...' : '✓ Simpan + Sync GCal'}
+                    {creatingActivity && creatingLabel === 'gcal'
+                      ? '⏳ Menyimpan & Sync...'
+                      : '✓ Simpan + Sync GCal'}
                   </button>
                 )}
               </div>

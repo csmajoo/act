@@ -70,6 +70,8 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
   const [processingTaskId, setProcessingTaskId] = useState(null) // track which pending task is being processed
   const [editingActivityId, setEditingActivityId] = useState(null) // set when editing an existing activity
   const [supervisorHandoverTeamLeaderId, setSupervisorHandoverTeamLeaderId] = useState(null) // for supervisor's handover team leader selection
+  const [saving, setSaving] = useState(false) // loading state for save buttons
+  const [savingLabel, setSavingLabel] = useState('') // which button is loading
 
   // Process task modal
   const [processTask, setProcessTask] = useState(null)
@@ -357,6 +359,10 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
   const handleSaveActivity = async (e, syncGoogle = false) => {
     e?.preventDefault?.()
     if (!validateForm()) return
+    if (saving) return  // prevent double-click
+
+    setSaving(true)
+    setSavingLabel(syncGoogle ? 'gcal' : 'save')
     try {
       let payload = { ...baseActivityPayload(), sync_google_calendar: syncGoogle }
       let response
@@ -414,6 +420,9 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
       loadAll()
     } catch (err) {
       toast.error('Gagal menyimpan aktivitas: ' + (err.response?.data?.error || err.message))
+    } finally {
+      setSaving(false)
+      setSavingLabel('')
     }
   }
 
@@ -1257,18 +1266,27 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
               background: '#f8fafc',
               display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap'
             }}>
-              <button type="button" className="btn btn-outline" onClick={() => setModalOpen(false)}>Batal</button>
+              <button type="button" className="btn btn-outline" onClick={() => setModalOpen(false)} disabled={saving}>Batal</button>
               {canHandover && (
                 <button type="button" onClick={handleHandover} className="btn"
-                  style={{ background: ROLE_COLOR[targetRole], color: 'white' }}>
+                  disabled={saving}
+                  style={{ background: ROLE_COLOR[targetRole], color: 'white', opacity: saving ? 0.6 : 1 }}>
                   → Handover ke {currentUser?.role === 'supervisor' && handoverTargetUser ? handoverTargetUser.name : ROLE_LABEL[targetRole]}
                 </button>
               )}
-              <button type="button" onClick={(e) => handleSaveActivity(e, false)} className="btn btn-success">
-                {editingActivityId ? '✓ Update Aktivitas' : '✓ Simpan Aktivitas'}
+              <button type="button" onClick={(e) => handleSaveActivity(e, false)} className="btn btn-success"
+                disabled={saving}
+                style={{ opacity: saving && savingLabel !== 'save' ? 0.6 : 1 }}>
+                {saving && savingLabel === 'save'
+                  ? '⏳ Menyimpan...'
+                  : (editingActivityId ? '✓ Update Aktivitas' : '✓ Simpan Aktivitas')}
               </button>
-              <button type="button" onClick={(e) => handleSaveActivity(e, true)} className="btn" style={{ background: '#17A697', color: 'white' }}>
-                {editingActivityId ? '✓ Update + Sync GCal' : '✓ Simpan + Sync GCal'}
+              <button type="button" onClick={(e) => handleSaveActivity(e, true)} className="btn"
+                disabled={saving}
+                style={{ background: '#17A697', color: 'white', opacity: saving && savingLabel !== 'gcal' ? 0.6 : 1 }}>
+                {saving && savingLabel === 'gcal'
+                  ? '⏳ Menyimpan & Sync...'
+                  : (editingActivityId ? '✓ Update + Sync GCal' : '✓ Simpan + Sync GCal')}
               </button>
             </div>
           </div>
