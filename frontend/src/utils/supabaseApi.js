@@ -793,7 +793,7 @@ const handlers = {
       .from('templates')
       .select(`
         id, team_leader_id, category_id, activity_name, duration,
-        source_id, created_by_user_id, is_default,
+        source_id, notes, created_by_user_id, is_default,
         activity_categories(name),
         activity_sources(name)
       `)
@@ -827,6 +827,7 @@ const handlers = {
       duration: t.duration,
       source_id: t.source_id,
       source_name: t.activity_sources?.name,
+      notes: t.notes,
       created_by_user_id: t.created_by_user_id,
       created_by_name: creatorMap[t.created_by_user_id] || null,
       is_default: t.is_default,
@@ -841,6 +842,7 @@ const handlers = {
       activity_name: body.activity_name,
       duration: body.duration,
       source_id: body.source_id || null,
+      notes: body.notes || null,
       created_by_user_id: body.created_by_user_id || null,
       is_default: body.is_default || 0
     }
@@ -855,6 +857,7 @@ const handlers = {
     if (body.activity_name !== undefined) payload.activity_name = body.activity_name
     if (body.duration !== undefined) payload.duration = body.duration
     if (body.source_id !== undefined) payload.source_id = body.source_id || null
+    if (body.notes !== undefined) payload.notes = body.notes
 
     const { data, error } = await supabase
       .from('templates')
