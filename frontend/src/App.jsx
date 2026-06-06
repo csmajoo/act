@@ -248,7 +248,7 @@ export default function App() {
           ☰
         </button>
 
-        {currentPage === 'dashboard' && <Dashboard teamLeaders={visibleTeamLeaders} />}
+        {currentPage === 'dashboard' && <Dashboard teamLeaders={visibleTeamLeaders} users={users} currentUser={currentUser} />}
         {currentPage === 'todo' && (
           <TodoList
             teamLeaders={visibleTeamLeaders}

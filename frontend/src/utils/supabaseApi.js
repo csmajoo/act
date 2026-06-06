@@ -1048,7 +1048,7 @@ const handlers = {
 
   // ── REPORTS ──
   async getDashboardReports(params = {}) {
-    const { startDate, endDate, teamLeaderId } = params
+    const { startDate, endDate, teamLeaderId, userId } = params
 
     // Fetch all activities in range (with is_done=1) and joined data
     let actQuery = supabase
@@ -1061,10 +1061,11 @@ const handlers = {
       `)
       .eq('is_done', 1)
 
-    // FIX: Filter by who DID the activity (on_duty_user_id) matching team members
-    // NOT by team_leader_id stored on activity (which could be wrong for supervisor activities)
-    if (teamLeaderId) {
-      // Get all user IDs in this team (team leader + caretakers)
+    // Filter by specific user (for supervisor individual view)
+    if (userId) {
+      actQuery = actQuery.eq('on_duty_user_id', userId)
+    } else if (teamLeaderId) {
+      // FIX: Filter by who DID the activity (on_duty_user_id) matching team members
       const { data: teamMembers } = await supabase
         .from('users')
         .select('id')
@@ -1074,7 +1075,6 @@ const handlers = {
       if (memberIds.length > 0) {
         actQuery = actQuery.in('on_duty_user_id', memberIds)
       } else {
-        // No team members → no activities
         actQuery = actQuery.eq('id', -1)
       }
     }

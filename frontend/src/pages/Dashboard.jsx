@@ -11,7 +11,7 @@ const COLORS = ['#17A697', '#5DD65D', '#FFC107', '#FF6B35', '#0D7A71', '#00A8E8'
 
 const fmt = (n) => n ? n.toLocaleString('id-ID') : '0'
 
-export default function Dashboard({ teamLeaders }) {
+export default function Dashboard({ teamLeaders, users = [], currentUser }) {
   const today = new Date().toISOString().split('T')[0]
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
 
@@ -58,7 +58,14 @@ export default function Dashboard({ teamLeaders }) {
     try {
       setLoading(true)
       const params = { startDate, endDate }
-      if (filterTL) params.teamLeaderId = filterTL
+      // Check if selected filter is a supervisor (not a team leader)
+      const selectedUser = users.find(u => u.id === parseInt(filterTL))
+      if (filterTL && selectedUser?.role === 'supervisor') {
+        // For supervisor: filter by userId (their own activities)
+        params.userId = filterTL
+      } else if (filterTL) {
+        params.teamLeaderId = filterTL
+      }
       const res = await api.get('/reports/dashboard', { params })
       setData(res.data)
     } catch (err) {
@@ -67,6 +74,9 @@ export default function Dashboard({ teamLeaders }) {
       setLoading(false)
     }
   }
+
+  // Get supervisors for dropdown
+  const supervisors = users.filter(u => u.role === 'supervisor')
 
   // filter team leaders by area
   const areas = [...new Set(teamLeaders.map(tl => tl.area).filter(Boolean))]
@@ -117,8 +127,15 @@ export default function Dashboard({ teamLeaders }) {
           <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-light)', display: 'block', marginBottom: '4px' }}>TEAM LEADER</label>
           <select value={filterTL} onChange={e => setFilterTL(e.target.value)}
             style={{ padding: '7px 10px', fontSize: '13px', border: '1px solid var(--border)', borderRadius: '6px', minWidth: '160px' }}>
-            <option value="">Semua TL</option>
-            {filteredTLs.map(tl => <option key={tl.id} value={tl.id}>{tl.name}</option>)}
+            <option value="">Semua</option>
+            {supervisors.length > 0 && (
+              <optgroup label="Supervisor">
+                {supervisors.map(sv => <option key={sv.id} value={sv.id}>{sv.name}</option>)}
+              </optgroup>
+            )}
+            <optgroup label="Team Leader">
+              {filteredTLs.map(tl => <option key={tl.id} value={tl.id}>{tl.name}</option>)}
+            </optgroup>
           </select>
         </div>
 
