@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import api from '../utils/api'
 import toast from '../utils/toast'
+import confirm from '../utils/confirm'
 
 export default function TemplateManagement({ teamLeaders, users = [], categories, sources, onAddCategory, onAddSource, onUpdateCategory, onUpdateSource, onDeleteCategory, onDeleteSource, currentUser }) {
   const [selectedTeamLeader, setSelectedTeamLeader] = useState(null)
@@ -107,7 +108,15 @@ export default function TemplateManagement({ teamLeaders, users = [], categories
   }
 
   const handleDeleteTemplate = async (id) => {
-    if (!confirm('Hapus template ini?')) return
+    const tpl = templates.find(t => t.id === id)
+    const ok = await confirm.ask({
+      title: 'Hapus Template',
+      message: `Yakin ingin menghapus template "${tpl?.activity_name || 'ini'}"?`,
+      confirmText: '🗑 Hapus',
+      cancelText: 'Batal',
+      danger: true
+    })
+    if (!ok) return
     try {
       await api.delete(`/templates/${id}`)
       toast.success('Template berhasil dihapus')
@@ -155,7 +164,15 @@ export default function TemplateManagement({ teamLeaders, users = [], categories
   }
 
   const handleDeleteCategory = async (id) => {
-    if (!confirm('Hapus kategori ini? Template menggunakan kategori ini juga akan terpengaruh.')) return
+    const cat = categories.find(c => c.id === id)
+    const ok = await confirm.ask({
+      title: 'Hapus Kategori',
+      message: `Yakin ingin menghapus kategori "${cat?.name || 'ini'}"?\n\nTemplate yang menggunakan kategori ini juga akan terpengaruh.`,
+      confirmText: '🗑 Hapus',
+      cancelText: 'Batal',
+      danger: true
+    })
+    if (!ok) return
     try {
       await onDeleteCategory(id)
       loadTemplates()
@@ -182,13 +199,21 @@ export default function TemplateManagement({ teamLeaders, users = [], categories
   }
 
   const handleDeleteSource = async (id) => {
-    if (!confirm('Hapus sumber ini? Template menggunakan sumber ini juga akan terpengaruh.')) return
+    const src = sources.find(s => s.id === id)
+    const ok = await confirm.ask({
+      title: 'Hapus Sumber',
+      message: `Yakin ingin menghapus sumber "${src?.name || 'ini'}"?\n\nTemplate yang menggunakan sumber ini juga akan terpengaruh.`,
+      confirmText: '🗑 Hapus',
+      cancelText: 'Batal',
+      danger: true
+    })
+    if (!ok) return
     try {
       await onDeleteSource(id)
       loadTemplates()
     } catch (error) {
       console.error('Failed to delete source:', error)
-      alert(error.response?.data?.error || 'Gagal menghapus sumber')
+      toast.error(error.response?.data?.error || 'Gagal menghapus sumber')
     }
   }
 

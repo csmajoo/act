@@ -9,6 +9,7 @@ import Login from './pages/Login'
 import { supabase } from './utils/supabase'
 import api, { isDevelopment } from './utils/api'
 import toast from './utils/toast'
+import confirm from './utils/confirm'
 
 const ROLE_LABEL = { supervisor: 'Supervisor', team_leader: 'Team Leader', caretaker: 'Caretaker' }
 const ROLE_COLOR = { supervisor: '#0D7A71', team_leader: '#17A697', caretaker: '#FFC107' }
@@ -296,6 +297,77 @@ export default function App() {
           onCancel={() => setShowLogoutConfirm(false)}
         />
       )}
+
+      <ConfirmContainer />
+    </div>
+  )
+}
+
+function ConfirmContainer() {
+  const [config, setConfig] = useState(null)
+
+  useEffect(() => {
+    const unsubscribe = confirm.subscribe(setConfig)
+    return unsubscribe
+  }, [])
+
+  if (!config) return null
+
+  return (
+    <div onClick={() => confirm.cancel()} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 3000, padding: '20px'
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: 'white', borderRadius: '12px',
+        maxWidth: '420px', width: '100%',
+        boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+        overflow: 'hidden'
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: '20px 24px',
+          background: config.danger
+            ? 'linear-gradient(90deg, #dc2626 0%, #b91c1c 100%)'
+            : 'linear-gradient(90deg, #17A697 0%, #0D7A71 100%)',
+          color: 'white'
+        }}>
+          <h3 style={{ fontSize: '18px', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {config.icon} {config.title}
+          </h3>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '24px' }}>
+          <p style={{ fontSize: '15px', color: 'var(--text)', marginBottom: '20px', lineHeight: 1.5 }}>
+            {config.message}
+          </p>
+
+          {/* Buttons */}
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => confirm.cancel()}
+              className="btn btn-outline"
+              style={{ padding: '8px 20px' }}
+            >
+              {config.cancelText}
+            </button>
+            <button
+              onClick={() => confirm.confirm()}
+              className="btn"
+              style={{
+                background: config.danger ? '#dc2626' : '#17A697',
+                color: 'white',
+                padding: '8px 20px',
+                border: 'none'
+              }}
+            >
+              {config.confirmText}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

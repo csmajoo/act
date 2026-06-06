@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import api from '../utils/api'
 import toast from '../utils/toast'
+import confirm from '../utils/confirm'
 
 // ── Constants ──
 const ROLE_LABEL = { supervisor: 'Supervisor', team_leader: 'Team Leader', caretaker: 'Caretaker' }
@@ -420,7 +421,14 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
   }
 
   const handleDeleteActivity = async (id) => {
-    if (!confirm('Hapus aktivitas ini?')) return
+    const ok = await confirm.ask({
+      title: 'Hapus Aktivitas',
+      message: 'Yakin ingin menghapus aktivitas ini?',
+      confirmText: '🗑 Hapus',
+      cancelText: 'Batal',
+      danger: true
+    })
+    if (!ok) return
     try {
       await api.delete(`/activities/${id}`)
       toast.success('Aktivitas berhasil dihapus')
@@ -451,7 +459,14 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
   }
 
   const handleDeleteTask = async (id) => {
-    if (!confirm('Hapus task pending ini?')) return
+    const ok = await confirm.ask({
+      title: 'Hapus Task Pending',
+      message: 'Yakin ingin menghapus task pending ini?',
+      confirmText: '🗑 Hapus',
+      cancelText: 'Batal',
+      danger: true
+    })
+    if (!ok) return
     try {
       await api.delete(`/tasks/${id}`)
       toast.success('Task pending berhasil dihapus')
