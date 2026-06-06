@@ -324,7 +324,9 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
       activity_name: tpl.activity_name || '',
       duration: newDuration,
       end_time: prev.start_time ? calcEndTime(prev.start_time, newDuration) : '',
-      source_id: tpl.source_id ? tpl.source_id.toString() : ''
+      source_id: tpl.source_id ? tpl.source_id.toString() : '',
+      // Auto-fill notes from template (only if user hasn't already typed something)
+      notes: prev.notes && prev.notes.trim() ? prev.notes : (tpl.notes || '')
     }))
   }
 
