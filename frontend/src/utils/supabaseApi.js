@@ -787,20 +787,35 @@ const handlers = {
 
   // ── TEMPLATES ──
   async getTemplates(teamLeaderId, params = {}) {
+    // Use left joins to handle null FKs gracefully
     let query = supabase
       .from('templates')
       .select(`
         id, team_leader_id, category_id, activity_name, duration,
         source_id, created_by_user_id, is_default,
         activity_categories(name),
-        activity_sources(name),
-        users!templates_created_by_user_id_fkey(name)
+        activity_sources(name)
       `)
       .eq('team_leader_id', teamLeaderId)
 
     if (params.userId) query = query.eq('created_by_user_id', params.userId)
 
-    const { data } = await query
+    const { data, error } = await query
+    if (error) {
+      console.error('[getTemplates] Error:', error)
+      throw error
+    }
+
+    // Optionally fetch creator names separately to avoid join issues
+    const creatorIds = [...new Set((data || []).map(t => t.created_by_user_id).filter(Boolean))]
+    let creatorMap = {}
+    if (creatorIds.length > 0) {
+      const { data: creators } = await supabase
+        .from('users')
+        .select('id, name')
+        .in('id', creatorIds)
+      creatorMap = (creators || []).reduce((acc, u) => ({ ...acc, [u.id]: u.name }), {})
+    }
 
     return (data || []).map(t => ({
       id: t.id,
@@ -812,7 +827,7 @@ const handlers = {
       source_id: t.source_id,
       source_name: t.activity_sources?.name,
       created_by_user_id: t.created_by_user_id,
-      created_by_name: t.users?.name,
+      created_by_name: creatorMap[t.created_by_user_id] || null,
       is_default: t.is_default
     }))
   },
@@ -833,15 +848,23 @@ const handlers = {
   },
 
   async updateTemplate(id, body) {
-    const payload = {
-      category_id: body.category_id,
-      activity_name: body.activity_name,
-      duration: body.duration,
-      source_id: body.source_id || null
-    }
-    const { error } = await supabase.from('templates').update(payload).eq('id', id)
+    const payload = {}
+    if (body.category_id !== undefined) payload.category_id = body.category_id
+    if (body.activity_name !== undefined) payload.activity_name = body.activity_name
+    if (body.duration !== undefined) payload.duration = body.duration
+    if (body.source_id !== undefined) payload.source_id = body.source_id || null
+
+    const { data, error } = await supabase
+      .from('templates')
+      .update(payload)
+      .eq('id', id)
+      .select()
+
     if (error) throw error
-    return { success: true }
+    if (!data || data.length === 0) {
+      throw new Error('Template tidak ditemukan atau RLS memblokir update')
+    }
+    return { success: true, data: data[0] }
   },
 
   async deleteTemplate(id) {

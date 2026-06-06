@@ -48,7 +48,7 @@ export default function TemplateManagement({ teamLeaders, users = [], categories
   const handleAddTemplate = async (e) => {
     e.preventDefault()
     if (!formData.category_id || !formData.activity_name.trim() || !formData.duration) {
-      alert('Kategori, nama activity, dan durasi harus diisi')
+      toast.error('Kategori, nama activity, dan durasi harus diisi')
       return
     }
 
@@ -58,14 +58,16 @@ export default function TemplateManagement({ teamLeaders, users = [], categories
         category_id: parseInt(formData.category_id),
         activity_name: formData.activity_name.trim(),
         duration: parseInt(formData.duration),
-        source_id: formData.source_id ? parseInt(formData.source_id) : null
+        source_id: formData.source_id ? parseInt(formData.source_id) : null,
+        created_by_user_id: currentUser?.id || null
       })
+      toast.success(`Template "${formData.activity_name.trim()}" berhasil disimpan`)
       setFormData({ category_id: '', activity_name: '', duration: '', source_id: '' })
       setFormOpen(false)
       loadTemplates()
     } catch (error) {
       console.error('Failed to add template:', error)
-      alert('Gagal menambahkan template')
+      toast.error('Gagal menambahkan template: ' + (error.response?.data?.error || error.message))
     }
   }
 
@@ -73,22 +75,34 @@ export default function TemplateManagement({ teamLeaders, users = [], categories
     setEditingId(tpl.id)
     setEditData({
       activity_name: tpl.activity_name || '',
+      category_id: tpl.category_id || '',
       duration: tpl.duration,
       source_id: tpl.source_id || ''
     })
   }
 
   const handleSaveEdit = async (id) => {
+    if (!editData.activity_name?.trim()) {
+      toast.error('Nama template tidak boleh kosong')
+      return
+    }
+    if (!editData.duration || parseInt(editData.duration) <= 0) {
+      toast.error('Durasi harus angka positif')
+      return
+    }
     try {
       await api.put(`/templates/${id}`, {
-        activity_name: editData.activity_name,
+        category_id: editData.category_id ? parseInt(editData.category_id) : undefined,
+        activity_name: editData.activity_name.trim(),
         duration: parseInt(editData.duration),
         source_id: editData.source_id ? parseInt(editData.source_id) : null
       })
+      toast.success('Template berhasil diupdate')
       setEditingId(null)
       loadTemplates()
     } catch (error) {
       console.error('Failed to update template:', error)
+      toast.error('Gagal mengupdate template: ' + (error.response?.data?.error || error.message))
     }
   }
 
