@@ -14,7 +14,8 @@ export default function TemplateManagement({ teamLeaders, users = [], categories
     category_id: '',
     activity_name: '',
     duration: '',
-    source_id: ''
+    source_id: '',
+    visibility: 'self'  // 'self' or 'all'
   })
   const [editingId, setEditingId] = useState(null)
   const [editData, setEditData] = useState({})
@@ -65,17 +66,28 @@ export default function TemplateManagement({ teamLeaders, users = [], categories
       return
     }
 
+    // Determine team_leader_id based on visibility
+    // - 'all': team_leader_id = null (visible to all areas)
+    // - 'self': team_leader_id = current user's team
+    let teamLeaderId = null
+    if (formData.visibility === 'self') {
+      if (currentUser?.role === 'team_leader') teamLeaderId = currentUser.id
+      else if (currentUser?.role === 'caretaker') teamLeaderId = currentUser.team_leader_id
+      else teamLeaderId = selectedTeamLeader  // supervisor uses currently filtered team
+    }
+
     try {
       await api.post('/templates', {
-        team_leader_id: selectedTeamLeader,
+        team_leader_id: teamLeaderId,
         category_id: parseInt(formData.category_id),
         activity_name: formData.activity_name.trim(),
         duration: parseInt(formData.duration),
         source_id: formData.source_id ? parseInt(formData.source_id) : null,
         created_by_user_id: currentUser?.id || null
       })
-      toast.success(`Template "${formData.activity_name.trim()}" berhasil disimpan`)
-      setFormData({ category_id: '', activity_name: '', duration: '', source_id: '' })
+      const visibilityText = formData.visibility === 'all' ? ' (Semua Area)' : ''
+      toast.success(`Template "${formData.activity_name.trim()}" berhasil disimpan${visibilityText}`)
+      setFormData({ category_id: '', activity_name: '', duration: '', source_id: '', visibility: 'self' })
       setFormOpen(false)
       loadTemplates()
     } catch (error) {
@@ -250,24 +262,10 @@ export default function TemplateManagement({ teamLeaders, users = [], categories
       </div>
 
       <div className="card mb-20">
-        <div className="form-row">
-          <div className="form-group">
-            <label>Filter Template</label>
-            <select
-              value={selectedUserFilter}
-              onChange={e => setSelectedUserFilter(e.target.value)}
-            >
-              <option value="all">Semua Template</option>
-              {teamUsers.map(user => (
-                <option key={user.id} value={user.id}>{user.name}</option>
-              ))}
-            </select>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-            <button className="btn btn-primary" onClick={() => setFormOpen(!formOpen)}>
-              {formOpen ? '✕ Batal' : '+ Tambah Template'}
-            </button>
-          </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <button className="btn btn-primary" onClick={() => setFormOpen(!formOpen)}>
+            {formOpen ? '✕ Batal' : '+ Tambah Template'}
+          </button>
         </div>
       </div>
 
@@ -328,7 +326,63 @@ export default function TemplateManagement({ teamLeaders, users = [], categories
               </div>
             </div>
 
-            <button type="submit" className="btn btn-success">✓ Simpan Template</button>
+            {/* Visibility radio buttons */}
+            <div className="form-group" style={{ marginTop: '12px' }}>
+              <label style={{ fontWeight: 600, marginBottom: '10px', display: 'block' }}>
+                Visibilitas Template <span style={{ color: 'var(--danger)' }}>*</span>
+              </label>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <label style={{
+                  flex: 1, minWidth: '200px',
+                  padding: '12px 14px',
+                  border: `2px solid ${formData.visibility === 'self' ? '#17A697' : 'var(--border)'}`,
+                  borderRadius: '8px', cursor: 'pointer',
+                  background: formData.visibility === 'self' ? '#f0fdfa' : 'white',
+                  transition: 'all 0.2s', display: 'flex', alignItems: 'flex-start', gap: '10px'
+                }}>
+                  <input
+                    type="radio"
+                    name="visibility"
+                    value="self"
+                    checked={formData.visibility === 'self'}
+                    onChange={e => setFormData({ ...formData, visibility: e.target.value })}
+                    style={{ marginTop: '3px' }}
+                  />
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '14px' }}>👤 Hanya Tim Saya</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '2px' }}>
+                      Template hanya muncul di tim Anda sendiri
+                    </div>
+                  </div>
+                </label>
+
+                <label style={{
+                  flex: 1, minWidth: '200px',
+                  padding: '12px 14px',
+                  border: `2px solid ${formData.visibility === 'all' ? '#17A697' : 'var(--border)'}`,
+                  borderRadius: '8px', cursor: 'pointer',
+                  background: formData.visibility === 'all' ? '#f0fdfa' : 'white',
+                  transition: 'all 0.2s', display: 'flex', alignItems: 'flex-start', gap: '10px'
+                }}>
+                  <input
+                    type="radio"
+                    name="visibility"
+                    value="all"
+                    checked={formData.visibility === 'all'}
+                    onChange={e => setFormData({ ...formData, visibility: e.target.value })}
+                    style={{ marginTop: '3px' }}
+                  />
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '14px' }}>🌐 Semua Area</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '2px' }}>
+                      Template muncul di semua Team Leader & area
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <button type="submit" className="btn btn-success" style={{ marginTop: '16px' }}>✓ Simpan Template</button>
           </form>
         </div>
       )}
@@ -409,7 +463,19 @@ export default function TemplateManagement({ teamLeaders, users = [], categories
                         </>
                       ) : (
                         <>
-                          <td>{tpl.activity_name || <span className="text-muted">-</span>}</td>
+                          <td>
+                            {tpl.activity_name || <span className="text-muted">-</span>}
+                            {tpl.is_global && (
+                              <span style={{
+                                marginLeft: '8px',
+                                background: '#dbeafe', color: '#1e40af',
+                                padding: '2px 8px', borderRadius: '4px',
+                                fontSize: '10px', fontWeight: 700
+                              }} title="Template ini tersedia di semua area">
+                                🌐 Semua Area
+                              </span>
+                            )}
+                          </td>
                           <td>{tpl.duration} menit</td>
                           <td>{tpl.source_name || '-'}</td>
                           <td>

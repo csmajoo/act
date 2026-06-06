@@ -788,7 +788,7 @@ const handlers = {
 
   // ── TEMPLATES ──
   async getTemplates(teamLeaderId, params = {}) {
-    // Use left joins to handle null FKs gracefully
+    // Show: team-specific templates AND global (all-area) templates where team_leader_id IS NULL
     let query = supabase
       .from('templates')
       .select(`
@@ -797,7 +797,7 @@ const handlers = {
         activity_categories(name),
         activity_sources(name)
       `)
-      .eq('team_leader_id', teamLeaderId)
+      .or(`team_leader_id.eq.${teamLeaderId},team_leader_id.is.null`)
 
     if (params.userId) query = query.eq('created_by_user_id', params.userId)
 
@@ -829,7 +829,8 @@ const handlers = {
       source_name: t.activity_sources?.name,
       created_by_user_id: t.created_by_user_id,
       created_by_name: creatorMap[t.created_by_user_id] || null,
-      is_default: t.is_default
+      is_default: t.is_default,
+      is_global: t.team_leader_id === null  // true if template is global (all areas)
     }))
   },
 
