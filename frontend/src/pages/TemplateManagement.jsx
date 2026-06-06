@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import api from '../utils/api'
+import toast from '../utils/toast'
 
-export default function TemplateManagement({ teamLeaders, users = [], categories, sources, onAddCategory, onAddSource, onDeleteCategory, onDeleteSource, currentUser }) {
+export default function TemplateManagement({ teamLeaders, users = [], categories, sources, onAddCategory, onAddSource, onUpdateCategory, onUpdateSource, onDeleteCategory, onDeleteSource, currentUser }) {
   const [selectedTeamLeader, setSelectedTeamLeader] = useState(null)
   const [selectedUserFilter, setSelectedUserFilter] = useState('all')
   const [templates, setTemplates] = useState([])
@@ -95,9 +96,11 @@ export default function TemplateManagement({ teamLeaders, users = [], categories
     if (!confirm('Hapus template ini?')) return
     try {
       await api.delete(`/templates/${id}`)
+      toast.success('Template berhasil dihapus')
       loadTemplates()
     } catch (error) {
       console.error('Failed to delete template:', error)
+      toast.error('Gagal menghapus template: ' + (error.response?.data?.error || error.message))
     }
   }
 
@@ -120,14 +123,20 @@ export default function TemplateManagement({ teamLeaders, users = [], categories
   const handleUpdateCategory = async (id) => {
     if (!editingCategoryName.trim()) return
     try {
-      await api.put(`/users/categories/${id}`, { name: editingCategoryName.trim() })
+      // Use parent callback to update state + show toast
+      if (onUpdateCategory) {
+        await onUpdateCategory(id, editingCategoryName.trim())
+      } else {
+        await api.put(`/users/categories/${id}`, { name: editingCategoryName.trim() })
+        toast.success(`Kategori berhasil diupdate menjadi "${editingCategoryName.trim()}"`)
+      }
       setEditingCategoryId(null)
       setEditingCategoryName('')
       // Reload templates to reflect category name change
       loadTemplates()
     } catch (error) {
       console.error('Failed to update category:', error)
-      alert('Gagal mengupdate kategori')
+      // Toast already shown by parent callback if it errored
     }
   }
 
@@ -138,20 +147,23 @@ export default function TemplateManagement({ teamLeaders, users = [], categories
       loadTemplates()
     } catch (error) {
       console.error('Failed to delete category:', error)
-      alert(error.response?.data?.error || 'Gagal menghapus kategori')
     }
   }
 
   const handleUpdateSource = async (id) => {
     if (!editingSourceName.trim()) return
     try {
-      await api.put(`/users/sources/${id}`, { name: editingSourceName.trim() })
+      if (onUpdateSource) {
+        await onUpdateSource(id, editingSourceName.trim())
+      } else {
+        await api.put(`/users/sources/${id}`, { name: editingSourceName.trim() })
+        toast.success(`Sumber berhasil diupdate menjadi "${editingSourceName.trim()}"`)
+      }
       setEditingSourceId(null)
       setEditingSourceName('')
       loadTemplates()
     } catch (error) {
       console.error('Failed to update source:', error)
-      alert('Gagal mengupdate sumber')
     }
   }
 

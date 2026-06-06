@@ -130,8 +130,28 @@ export default function App() {
       const { error } = await supabase.from('activity_categories').delete().eq('id', id)
       if (error) throw error
       setCategories(categories.filter(cat => cat.id !== id))
+      toast.success('Kategori berhasil dihapus')
     } catch (error) {
       console.error('Failed to delete category:', error)
+      toast.error('Gagal menghapus kategori')
+      throw error
+    }
+  }
+
+  const handleUpdateCategory = async (id, name) => {
+    try {
+      const { data, error } = await supabase
+        .from('activity_categories')
+        .update({ name })
+        .eq('id', id)
+        .select()
+      if (error) throw error
+      if (!data || data.length === 0) throw new Error('Kategori tidak ditemukan')
+      setCategories(categories.map(cat => cat.id === id ? { ...cat, name } : cat))
+      toast.success(`Kategori berhasil diupdate menjadi "${name}"`)
+    } catch (error) {
+      console.error('Failed to update category:', error)
+      toast.error('Gagal mengupdate kategori: ' + error.message)
       throw error
     }
   }
@@ -153,8 +173,28 @@ export default function App() {
       const { error } = await supabase.from('activity_sources').delete().eq('id', id)
       if (error) throw error
       setSources(sources.filter(src => src.id !== id))
+      toast.success('Sumber berhasil dihapus')
     } catch (error) {
       console.error('Failed to delete source:', error)
+      toast.error('Gagal menghapus sumber')
+      throw error
+    }
+  }
+
+  const handleUpdateSource = async (id, name) => {
+    try {
+      const { data, error } = await supabase
+        .from('activity_sources')
+        .update({ name })
+        .eq('id', id)
+        .select()
+      if (error) throw error
+      if (!data || data.length === 0) throw new Error('Sumber tidak ditemukan')
+      setSources(sources.map(src => src.id === id ? { ...src, name } : src))
+      toast.success(`Sumber berhasil diupdate menjadi "${name}"`)
+    } catch (error) {
+      console.error('Failed to update source:', error)
+      toast.error('Gagal mengupdate sumber: ' + error.message)
       throw error
     }
   }
@@ -228,6 +268,8 @@ export default function App() {
             sources={sources}
             onAddCategory={handleAddCategory}
             onAddSource={handleAddSource}
+            onUpdateCategory={handleUpdateCategory}
+            onUpdateSource={handleUpdateSource}
             onDeleteCategory={handleDeleteCategory}
             onDeleteSource={handleDeleteSource}
             currentUser={currentUser}
