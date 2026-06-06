@@ -586,11 +586,13 @@ export default function Activity({ teamLeaders, users = [], categories = [], sou
   const canHandover = targetRole !== null
 
   // Auto-derive team_leader_id from selected user
+  // FIX: Supervisor activities should NOT be tied to any team (use null)
+  // so they don't appear in any team's dashboard stats
   const deriveTeamLeaderId = (user) => {
-    if (!user) return selectedTeamLeader
+    if (!user) return null
     if (user.role === 'team_leader') return user.id
     if (user.role === 'caretaker') return user.team_leader_id
-    return selectedTeamLeader // supervisor → use current team filter
+    return null // supervisor → no team
   }
   const totalMinutes = activities.reduce((s, a) => s + a.duration, 0)
   

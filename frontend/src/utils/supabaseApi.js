@@ -389,7 +389,20 @@ const handlers = {
         activity_sources(name)
       `)
 
-    if (params.teamLeaderId) query = query.eq('team_leader_id', params.teamLeaderId)
+    // Filter by team members (on_duty_user_id) if teamLeaderId specified
+    if (params.teamLeaderId) {
+      const { data: teamMembers } = await supabase
+        .from('users')
+        .select('id')
+        .or(`id.eq.${params.teamLeaderId},team_leader_id.eq.${params.teamLeaderId}`)
+
+      const memberIds = (teamMembers || []).map(u => u.id)
+      if (memberIds.length > 0) {
+        query = query.in('on_duty_user_id', memberIds)
+      } else {
+        query = query.eq('id', -1)
+      }
+    }
     if (params.userId) query = query.eq('on_duty_user_id', params.userId)
     if (params.startDate) query = query.gte('activity_date', params.startDate)
     if (params.endDate) query = query.lte('activity_date', params.endDate)
@@ -1048,7 +1061,23 @@ const handlers = {
       `)
       .eq('is_done', 1)
 
-    if (teamLeaderId) actQuery = actQuery.eq('team_leader_id', teamLeaderId)
+    // FIX: Filter by who DID the activity (on_duty_user_id) matching team members
+    // NOT by team_leader_id stored on activity (which could be wrong for supervisor activities)
+    if (teamLeaderId) {
+      // Get all user IDs in this team (team leader + caretakers)
+      const { data: teamMembers } = await supabase
+        .from('users')
+        .select('id')
+        .or(`id.eq.${teamLeaderId},team_leader_id.eq.${teamLeaderId}`)
+
+      const memberIds = (teamMembers || []).map(u => u.id)
+      if (memberIds.length > 0) {
+        actQuery = actQuery.in('on_duty_user_id', memberIds)
+      } else {
+        // No team members → no activities
+        actQuery = actQuery.eq('id', -1)
+      }
+    }
     if (startDate) actQuery = actQuery.gte('activity_date', startDate)
     if (endDate) actQuery = actQuery.lte('activity_date', endDate)
 
@@ -1210,7 +1239,20 @@ const handlers = {
         users!daily_activities_on_duty_user_id_fkey(name, role)
       `)
 
-    if (teamLeaderId) query = query.eq('team_leader_id', teamLeaderId)
+    // Filter by team members (on_duty_user_id), not by team_leader_id stored on activity
+    if (teamLeaderId) {
+      const { data: teamMembers } = await supabase
+        .from('users')
+        .select('id')
+        .or(`id.eq.${teamLeaderId},team_leader_id.eq.${teamLeaderId}`)
+
+      const memberIds = (teamMembers || []).map(u => u.id)
+      if (memberIds.length > 0) {
+        query = query.in('on_duty_user_id', memberIds)
+      } else {
+        query = query.eq('id', -1)
+      }
+    }
     if (startDate) query = query.gte('activity_date', startDate)
     if (endDate) query = query.lte('activity_date', endDate)
 
