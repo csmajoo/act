@@ -634,7 +634,7 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
             end_time: createForm.end_time || null,
             source_id: createForm.source_id ? parseInt(createForm.source_id) : null,
             notes: createForm.notes,
-            repeat_type: createForm.repeat_type,
+            recurrence: createForm.repeat_type || 'none',
             repeat_end_date: createForm.repeat_type !== 'none' ? createForm.repeat_end_date : null,
             is_done: 0,
             sync_google_calendar: syncGoogle
@@ -999,6 +999,17 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
                               via {act.source_name}
                             </span>
                           )}
+                          {act.repeat_type && act.repeat_type !== 'none' && (
+                            <span 
+                              style={{ 
+                                background: '#E3F2FD', color: '#1976D2', 
+                                padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600
+                              }}
+                              title={`Pengulangan: ${act.repeat_type}${act.repeat_end_date ? ' sampai ' + act.repeat_end_date : ''}`}
+                            >
+                              🔁 {act.repeat_type}
+                            </span>
+                          )}
                         </div>
                         <h4 style={{ fontSize: '15px', fontWeight: 600, marginTop: '6px', color: 'var(--text)' }}>
                           {act.activity_name}
@@ -1149,6 +1160,17 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
                           }}>
                             Selesai
                           </span>
+                          {act.repeat_type && act.repeat_type !== 'none' && (
+                            <span 
+                              style={{ 
+                                background: '#E3F2FD', color: '#1976D2', 
+                                padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600
+                              }}
+                              title={`Pengulangan: ${act.repeat_type}${act.repeat_end_date ? ' sampai ' + act.repeat_end_date : ''}`}
+                            >
+                              🔁 {act.repeat_type}
+                            </span>
+                          )}
                         </div>
                         <h4 style={{ fontSize: '15px', fontWeight: 600, marginTop: '6px', color: 'var(--text)', textDecoration: 'line-through' }}>
                           {act.activity_name}
@@ -1214,9 +1236,23 @@ export default function TodoList({ teamLeaders, users = [], currentUser, categor
         }}>
           <div style={{
             background: 'white', borderRadius: '8px', padding: '30px', maxWidth: '500px',
-            width: '90%', maxHeight: '80vh', overflowY: 'auto'
+            width: '90%', maxHeight: '80vh', overflowY: 'auto', position: 'relative'
           }}>
-            <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '20px' }}>
+            {/* Close button */}
+            <button
+              onClick={() => setShowCreateModal(false)}
+              style={{
+                position: 'absolute', top: '12px', right: '12px',
+                background: 'rgba(0,0,0,0.05)', border: 'none',
+                width: 32, height: 32, borderRadius: '50%',
+                fontSize: '18px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--text-light)'
+              }}
+              title="Tutup"
+            >×</button>
+
+            <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '20px', paddingRight: '30px' }}>
               {editingActivityId ? '✏️ Edit Aktivitas' : '➕ Tambah Aktivitas Baru'}
             </h3>
 
