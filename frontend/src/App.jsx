@@ -554,8 +554,7 @@ function Sidebar({ currentPage, setCurrentPage, currentUser, onLogout, isOpen, o
     { id: 'activity', label: '🗓️ Calendar', roles: ['supervisor', 'team_leader', 'caretaker'] },
     { id: 'templates', label: 'Template Aktivitas', roles: ['supervisor', 'team_leader'] },
     { id: 'reports', label: 'Laporan Produktivitas', roles: ['supervisor', 'team_leader', 'caretaker'] },
-    { id: 'users', label: 'Manajemen User', roles: ['supervisor'] },
-    { id: 'wa-blast', label: '🚀 WA Blast', roles: ['supervisor', 'team_leader', 'caretaker'], external: true, url: 'https://zulfikardwi-cx.github.io/blast-wa-personal/' }
+    { id: 'users', label: 'Manajemen User', roles: ['supervisor'] }
   ]
   const menuItems = allMenuItems.filter(m => m.roles.includes(currentUser.role))
 
@@ -598,40 +597,18 @@ function Sidebar({ currentPage, setCurrentPage, currentUser, onLogout, isOpen, o
       </div>
 
       <nav className="nav-menu">
-        {menuItems.map(item => {
-          if (item.external) {
-            return (
-              <a
-                key={item.id}
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="nav-item"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  textDecoration: 'none',
-                  color: 'var(--text)'
-                }}
-              >
-                {item.label}
-              </a>
-            )
-          }
-          return (
-            <button
-              key={item.id}
-              className={`nav-item ${currentPage === item.id ? 'active' : ''}`}
-              onClick={() => {
-                setCurrentPage(item.id)
-                onClose && onClose()
-              }}
-            >
-              {item.label}
-            </button>
-          )
-        })}
+        {menuItems.map(item => (
+          <button
+            key={item.id}
+            className={`nav-item ${currentPage === item.id ? 'active' : ''}`}
+            onClick={() => {
+              setCurrentPage(item.id)
+              onClose && onClose()
+            }}
+          >
+            {item.label}
+          </button>
+        ))}
 
         {/* External links section */}
         <div style={{
@@ -647,6 +624,24 @@ function Sidebar({ currentPage, setCurrentPage, currentUser, onLogout, isOpen, o
         }}>
           Tools Lainnya
         </div>
+        <a
+          href="https://zulfikardwi-cx.github.io/blast-wa-personal/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="nav-item"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            textDecoration: 'none',
+            color: 'var(--text)'
+          }}
+          title="Buka WA Blast di tab baru"
+        >
+          <span style={{ fontSize: '16px' }}>🚀</span>
+          <span>WA Blast</span>
+          <span style={{ marginLeft: 'auto', fontSize: '10px', opacity: 0.5 }}>↗</span>
+        </a>
         <a
           href="https://recordingfo-majoo.github.io/calendarCS/"
           target="_blank"
